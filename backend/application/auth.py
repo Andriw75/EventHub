@@ -1,3 +1,4 @@
+import random
 import os
 from datetime import datetime, timezone
 from fastapi import (
@@ -5,7 +6,7 @@ from fastapi import (
 )
 from fastapi.security import OAuth2PasswordRequestForm
 
-from domain.auth import UserResponse, UserCokie
+from domain.auth import UserResponse, UserCokie, CreateUser, CreateUserDb
 from service_container import ServiceContainer
 from infrastructure.rep_auth import JWTManagerImpl, BcryptMnjCrypt, UserService
 from application.mnj_ws import WebSocketManager
@@ -59,6 +60,33 @@ class AuthRouter:
         @self.router.get("/show-ws-data")
         async def show_ws_data(x_api_key:str =Depends(self.api_key_required())):
             return await WebSocketManager().get_all_data()
+
+        @self.router.post("/create-user",status_code=201)
+        async def create_user(
+            new_user:CreateUser,
+        ):
+            user_data = new_user.model_dump()
+            
+            cod = random.randint(1000, 9999)
+            hash_cod = self.crypt_manager.hash_password(str(cod))
+            user_data['cod'] = cod
+            user_data['hash_cod'] = hash_cod
+            new_user_db = CreateUserDb.model_validate(user_data)
+            new_user_db.password = self.crypt_manager.hash_password(new_user_db.password)
+            
+            await self.user_service.register_new_user(new_user_db)
+        
+        @self.router.get("/activate-account")
+        async def activate_account(email: str, hash_code: str):
+            result = await self.user_service.activate_account(email, hash_code, self.crypt_manager)
+            if result:
+                # TODO: MEJORAR LA RESPUESTA POR UN MEJOR HTML
+                return {"success": True, "message": "Cuenta activada correctamente"}
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="No se pudo activar la cuenta"
+                )
 
     # -------------------------
     # Manejo de cookies

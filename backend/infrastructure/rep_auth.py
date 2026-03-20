@@ -73,9 +73,10 @@ class BcryptMnjCrypt:
         hashed = bcrypt.hashpw(plain_password.encode('utf-8'), bcrypt.gensalt())
         return hashed.decode('utf-8')
 
-from domain.auth import UserDb
-from asyncpg import Connection
+from domain.auth import UserDb, CreateUserDb
+from asyncpg import Connection,UniqueViolationError
 from infrastructure._db._db import PostgresDB
+from infrastructure.send_email import send_email,verification_email_html
 
 class UserService:
     def __init__(self):...
@@ -109,4 +110,75 @@ class UserService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
     
+    async def register_new_user(self, new_user: CreateUserDb):
+        try:
+            async with (await PostgresDB.acquire()) as conn:
+                conn: Connection
+                async with conn.transaction():
+                    await conn.fetchrow(
+                        """
+                        INSERT INTO "User" (username,password,correo,estado,codigo)
+                        VALUES ($1,$2,$3,FALSE,$4);
+                        """,
+                        new_user.name, new_user.password, new_user.correo, new_user.cod
+                    )
+
+                    verify_url = (
+                        f"{os.getenv('URL_DESPLIEGUE')}/auth/activate-account?"
+                        f"email={new_user.correo}&"
+                        f"hash_code={new_user.hash_cod}"
+                    )
+
+                    html = verification_email_html(
+                        username=new_user.name,
+                        verify_url=verify_url
+                    )
+
+                    await send_email(
+                        to=new_user.correo,
+                        subject=f"Validación de cuenta - {os.getenv('NAME_PROYECT')}",
+                        html=html
+                    )
+        except UniqueViolationError:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="El username o el correo ya están registrados"
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    async def activate_account(self, correo: str, has_cod: str, rep_encrip: BcryptMnjCrypt):
+        try:
+            async with (await PostgresDB.acquire()) as conn:
+                conn: Connection
+                async with conn.transaction():
+                    row = await conn.fetchrow(
+                        'SELECT codigo FROM "User" WHERE correo=$1 AND estado=FALSE;', correo
+                    )
+
+                    if row is None:
+                        raise HTTPException(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Usuario no encontrado o hash incorrecto."
+                        )
+
+                    if not rep_encrip.verify_password(str(row['codigo']), has_cod):
+                        raise HTTPException(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Usuario no encontrado o hash incorrecto."
+                        )
+
+                    # Actualizamos el estado y eliminamos el código
+                    await conn.execute(
+                        """
+                        UPDATE "User"
+                        SET codigo=NULL, estado=TRUE
+                        WHERE correo=$1;
+                        """,
+                        correo
+                    )
+
+                    return True
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 

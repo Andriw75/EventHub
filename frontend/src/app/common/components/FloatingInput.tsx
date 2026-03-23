@@ -1,4 +1,4 @@
-import { createSignal, createEffect } from "solid-js";
+import { createSignal } from "solid-js";
 import styles from "./FloatingInput.module.css";
 
 interface FloatingInputProps {
@@ -14,28 +14,20 @@ interface FloatingInputProps {
 export default function FloatingInput(props: FloatingInputProps) {
   let inputRef: HTMLInputElement | undefined;
   const [isFocused, setIsFocused] = createSignal(false);
-  const [value, setValue] = createSignal(props.value || "");
 
-  createEffect(() => {
-    if (props.value !== undefined && props.value !== value()) {
-      setValue(props.value);
-    }
-  });
-
-  const handleInput = () => {
-    if (inputRef) setValue(inputRef.value);
-    if (props.onInput && inputRef) props.onInput(inputRef.value);
-    if (props.ref && inputRef) props.ref(inputRef);
+  const handleInput = (e: InputEvent) => {
+    const target = e.target as HTMLInputElement;
+    props.onInput?.(target.value);
   };
 
-  const isActive = () => isFocused() || value() !== "";
+  const isActive = () => isFocused() || (props.value ?? "") !== "";
 
   return (
     <div class={`${styles.container} ${props.containerClass || ""}`}>
       <input
         ref={(el) => (inputRef = el)}
         type={props.type || "text"}
-        value={value()}
+        value={props.value || ""}
         class={`${styles.input} ${props.inputClass || ""}`}
         onInput={handleInput}
         onFocus={() => setIsFocused(true)}

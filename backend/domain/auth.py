@@ -1,28 +1,33 @@
-from pydantic import BaseModel,field_validator
-
-class UserResponse(BaseModel):
-    name:str
-    permissions:list[str] = []
-
-class UserCokie(UserResponse):
-    id:int
-    
-class UserDb(UserCokie):
-    password:str
-
+from pydantic import BaseModel, field_validator
 import re
 
-class CreateUser(BaseModel):
-    correo:str
-    name:str
-    password:str
+def validate_username(value: str) -> str:
+    if len(value) >= 50:
+        raise ValueError('El usuario debe tener menos de 50 caracteres')
     
-    @field_validator('name')
-    @classmethod
-    def validate_user(cls, value):
-        if len(value) >= 50:
-            raise ValueError('El usuario debe tener menos de 50 caracteres')
-        return value
+    if not re.match(r'^[a-zA-Z0-9_-]+$', value):
+        raise ValueError('El nombre de usuario solo puede contener letras, números, guiones o guiones bajos')
+    
+    return value
+
+class UserResponse(BaseModel):
+    name: str
+    permissions: list[str] = []
+
+    _validate_name = field_validator('name', mode='before')(validate_username)
+
+class UserCokie(UserResponse):
+    id: int
+
+class UserDb(UserCokie):
+    password: str
+
+class CreateUser(BaseModel):
+    correo: str
+    name: str
+    password: str
+
+    _validate_name = field_validator('name', mode='before')(validate_username)
 
     @field_validator('password')
     @classmethod
@@ -48,10 +53,10 @@ class CreateUser(BaseModel):
         return value
 
 class CreateUserDb(BaseModel):
-    correo:str
-    name:str
-    password:str
-    
-    cod:int
-    hash_cod:str
+    correo: str
+    name: str
+    password: str
+    cod: int
+    hash_cod: str
 
+    _validate_name = field_validator('name', mode='before')(validate_username)

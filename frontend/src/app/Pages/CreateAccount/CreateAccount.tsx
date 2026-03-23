@@ -32,6 +32,12 @@ export default function CreateAccount() {
     if (!value) return "El nombre es obligatorio";
     if (value.length >= 50)
       return "El usuario debe tener menos de 50 caracteres";
+
+    const usernameRegex = /^[a-zA-Z0-9_-]+$/;
+    if (!usernameRegex.test(value)) {
+      return "El nombre solo puede contener letras, números, guiones o guiones bajos";
+    }
+
     return "";
   };
 

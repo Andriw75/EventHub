@@ -69,6 +69,7 @@ export const authService = {
       };
     }
   },
+
   async logout(): Promise<void> {
     await fetch(`${AUTH_URL}/logout`, {
       method: "POST",

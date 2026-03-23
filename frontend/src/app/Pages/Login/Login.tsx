@@ -9,7 +9,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { user, login } = useAuth();
 
-  const [email, setEmail] = createSignal("");
+  const [username, setusername] = createSignal("");
   const [password, setPassword] = createSignal("");
   const [error, setError] = createSignal("");
   const [loadingLogin, setloadingLogin] = createSignal(false);
@@ -20,12 +20,12 @@ export default function Login() {
     setError("");
     setloadingLogin(true);
 
-    const result = await login(email(), password());
+    const result = await login(username(), password());
 
     if (result) {
       setError("CARGADO");
     } else {
-      setError("Correo o contraseña incorrectos");
+      setError("Username o contraseña incorrectos");
     }
 
     setloadingLogin(false);
@@ -38,10 +38,9 @@ export default function Login() {
     <div class={styles.container}>
       <h1>Login</h1>
       <FloatingInput
-        placeholder="Correo"
-        type="email"
-        value={email()}
-        onInput={setEmail}
+        placeholder="Username"
+        value={username()}
+        onInput={setusername}
         disabled={loadingLogin()}
       />
       <FloatingInput

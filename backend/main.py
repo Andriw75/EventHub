@@ -7,11 +7,13 @@ load_dotenv()
 ########################################
 from service_container import ServiceContainer
 from infrastructure.rep_auth import JWTManagerImpl, BcryptMnjCrypt, UserService
+from infrastructure.rep_events import RepEvents
 
 container = ServiceContainer()
 container.register(UserService,UserService,)
 container.register(BcryptMnjCrypt,BcryptMnjCrypt)
 container.register(JWTManagerImpl,JWTManagerImpl)
+container.register(RepEvents,RepEvents)
 
 # ########################################
 # # INICIAMOS LA APP
@@ -57,6 +59,9 @@ async def websocket_endpoint(websocket: WebSocket):
 from application.auth import AuthRouter
 instance_auth = AuthRouter(container)
 app.include_router(instance_auth.router)
+
+from application.eventsR import eventsR
+app.include_router(eventsR(container,instance_auth))
 
 if __name__ == '__main__':
     import uvicorn

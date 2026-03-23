@@ -24,6 +24,16 @@ app = FastAPI(
     title=os.getenv('NAME_PROYECT'),
 )
 
+# SOLO DESARROLLO
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 manager = WebSocketManager()
 
 @app.websocket("/ws")

@@ -39,3 +39,32 @@ h1 {
   color: #000;
   margin-bottom: 16px;
 }
+
+.error {
+  margin-top: 10px;
+  color: #ff4d4f;
+  font-size: 14px;
+  text-align: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.buttonLoading {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

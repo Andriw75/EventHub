@@ -30,10 +30,13 @@ export const AuthProvider = (props: { children: any }) => {
   const login = async (username: string, password: string) => {
     try {
       const data = await authService.login(username, password);
+      if (!data) {
+        setUser(null);
+        return null;
+      }
       setUser(data);
       return data;
     } catch (err) {
-      console.error("Error en login:", err);
       setUser(null);
       return null;
     }

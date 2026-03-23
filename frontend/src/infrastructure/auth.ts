@@ -22,12 +22,11 @@ export const authService = {
         body: formData,
         credentials: "include",
       });
-
+      const data = await res.json();
       if (!res.ok) {
-        return null;
+        console.error("Error del backend:", data);
+        throw new Error(data?.detail || "Error en login");
       }
-
-      const data: User = await res.json();
       return data;
     } catch (err) {
       console.error("Error en login:", err);

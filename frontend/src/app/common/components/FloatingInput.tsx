@@ -9,6 +9,7 @@ interface FloatingInputProps {
   containerClass?: string;
   ref?: (el: HTMLInputElement) => void;
   onInput?: (value: string) => void;
+  disabled?: boolean;
 }
 
 export default function FloatingInput(props: FloatingInputProps) {
@@ -28,7 +29,12 @@ export default function FloatingInput(props: FloatingInputProps) {
         ref={(el) => (inputRef = el)}
         type={props.type || "text"}
         value={props.value || ""}
-        class={`${styles.input} ${props.inputClass || ""}`}
+        disabled={props.disabled}
+        class={`
+    ${styles.input} 
+    ${props.inputClass || ""} 
+    ${props.disabled ? styles.disabled : ""}
+  `}
         onInput={handleInput}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}

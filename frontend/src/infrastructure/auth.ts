@@ -41,7 +41,7 @@ export const authService = {
     correo: string,
     name: string,
     password: string,
-  ): Promise<boolean> {
+  ): Promise<{ success: boolean; detail?: string }> {
     try {
       const res = await fetch(`${AUTH_URL}/create-user`, {
         method: "POST",
@@ -55,19 +55,20 @@ export const authService = {
         }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json();
-        console.error("Error del backend:", data);
-        return false;
+        return { success: false, detail: data.detail || "Error desconocido" };
       }
 
-      return true;
-    } catch (err) {
-      console.error("Error en register:", err);
-      return false;
+      return { success: true };
+    } catch (err: unknown) {
+      return {
+        success: false,
+        detail: err instanceof Error ? err.message : "Error desconocido",
+      };
     }
   },
-
   async logout(): Promise<void> {
     await fetch(`${AUTH_URL}/logout`, {
       method: "POST",

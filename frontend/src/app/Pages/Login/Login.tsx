@@ -1,3 +1,4 @@
+//TODO: VALIDAR QUE EXISTA USER NAME Y PASSWORD PARA HABILITAR EL BOTON DE LOGIN
 import { createSignal, onMount } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import FloatingInput from "../../common/components/FloatingInput";

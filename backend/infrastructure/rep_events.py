@@ -48,24 +48,48 @@ class RepEvents:
         """
         try:
             async with (await PostgresDB.acquire()) as conn:
-                rows = await conn.fetch(
+
+                user = await conn.fetchrow(
                     """
-                    SELECT e.id, e.nombre, e.tipo, e.estado, e.usuario_id, e.fecha_inicio, e.fecha_fin, e.metadata, e.created_at, e.updated_at
-                    FROM Event e
-                    JOIN Usuario u ON e.usuario_id = u.id
-                    WHERE u.nombre = $1
-                    ORDER BY e.fecha_inicio DESC;
+                    SELECT id
+                    FROM "User"
+                    WHERE username = $1 AND estado = TRUE;
                     """,
                     nombre_usuario
                 )
 
+                if not user:
+                    raise HTTPException(
+                        status_code=404,
+                        detail="Usuario no encontrado o inactivo"
+                    )
+
+                rows = await conn.fetch(
+                    """
+                    SELECT e.id, e.nombre, e.tipo, e.estado, e.usuario_id,
+                        e.fecha_inicio, e.fecha_fin, e.metadata,
+                        e.created_at, e.updated_at
+                    FROM Event e
+                    WHERE e.usuario_id = $1
+                    ORDER BY e.fecha_inicio DESC;
+                    """,
+                    user["id"]
+                )
+
                 return [
                     EventOut.model_validate(
-                        {**dict(r), "metadata": json.loads(r["metadata"]) if isinstance(r["metadata"], str) else r["metadata"]}
+                        {
+                            **dict(r),
+                            "metadata": json.loads(r["metadata"])
+                            if isinstance(r["metadata"], str)
+                            else r["metadata"]
+                        }
                     )
                     for r in rows
                 ]
 
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 

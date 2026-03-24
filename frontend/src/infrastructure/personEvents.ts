@@ -1,12 +1,10 @@
-import type { PersonData } from "../domain/personEvents";
+import type { PersonEvents } from "../domain/personEvents";
+import { handleResponse } from "./utils";
+
 const API_PERSON_EVENTS = `${import.meta.env.VITE_API_URL}/events`;
 
-export async function fetchPerson(name: string): Promise<PersonData | null> {
-  try {
-    const res = await fetch(`${API_PERSON_EVENTS}/?name=${name}`);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
+export function fetchPerson(name: string) {
+  return handleResponse<PersonEvents[]>(
+    `${API_PERSON_EVENTS}/?nombre_usuario=${name}`,
+  );
 }

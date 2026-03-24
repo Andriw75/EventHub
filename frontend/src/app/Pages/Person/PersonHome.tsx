@@ -1,8 +1,7 @@
 import { useParams, useNavigate } from "@solidjs/router";
-import { createResource, For } from "solid-js";
-
-
-
+import { createResource, For, Show } from "solid-js";
+import { fetchPerson } from "../../../infrastructure/personEvents";
+import styles from "./PersonHome.module.css";
 
 export default function PersonHome() {
   const params = useParams();
@@ -10,32 +9,57 @@ export default function PersonHome() {
 
   const [personData] = createResource(() => params.person, fetchPerson);
 
+  const events = () => personData()?.data;
+
   return (
-    <div style={{ padding: "1rem" }}>
-      {personData.loading && <p>Cargando usuario...</p>}
-      {personData.error && <p>Error al cargar usuario</p>}
-      {personData() ? (
-        <>
-          <h1>Bienvenido, {personData()?.name}</h1>
-          <p>Selecciona un evento:</p>
-          <ul>
-            <For each={personData()?.events}>
-              {(ev) => (
-                <li>
-                  <button
-                    onClick={() => navigate(`/${params.person}/${ev.id}`)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    {ev.title}
-                  </button>
-                </li>
-              )}
-            </For>
-          </ul>
-        </>
-      ) : (
-        !personData.loading && <p>Usuario no encontrado</p>
-      )}
+    <div class={styles.container}>
+      <Show when={personData.loading}>
+        <p class={styles.loading}>Cargando eventos...</p>
+      </Show>
+
+      <Show when={personData()?.error}>
+        {(err) => (
+          <p class={styles.error}>Error: {err().detail || "Error al cargar"}</p>
+        )}
+      </Show>
+
+      <Show when={events()}>
+        {(evs) => (
+          <>
+            <h1 class={styles.title}>Eventos de {params.person}</h1>
+
+            <ul class={styles.list}>
+              <For each={evs()}>
+                {(ev) => (
+                  <li class={styles.card}>
+                    <button
+                      class={styles.button}
+                      onClick={() => navigate(`/${params.person}/${ev.id}`)}
+                    >
+                      <h2 class={styles.eventTitle}>{ev.nombre}</h2>
+
+                      <p class={styles.meta}>Tipo: {ev.tipo}</p>
+
+                      <p class={styles.meta}>Estado: {ev.estado}</p>
+
+                      <p class={styles.date}>
+                        {new Date(ev.fecha_inicio).toLocaleDateString()} -{" "}
+                        {new Date(ev.fecha_fin).toLocaleDateString()}
+                      </p>
+                    </button>
+                  </li>
+                )}
+              </For>
+            </ul>
+          </>
+        )}
+      </Show>
+
+      <Show
+        when={!personData.loading && !personData()?.error && !events()?.length}
+      >
+        <p class={styles.empty}>No hay eventos disponibles</p>
+      </Show>
     </div>
   );
 }

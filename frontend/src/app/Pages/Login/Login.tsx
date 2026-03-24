@@ -24,7 +24,7 @@ export default function Login() {
     const result = await login(username(), password());
 
     if (result) {
-      setError("CARGADO");
+      navigate(`/${user()?.name}/dashboard`);
     } else {
       setError("Username o contraseña incorrectos");
     }

@@ -34,7 +34,7 @@ export default function PersonHome() {
                   <li class={styles.card}>
                     <button
                       class={styles.button}
-                      onClick={() => navigate(`/${params.person}/${ev.id}`)}
+                      onClick={() => navigate(`/${params.person}/${ev.nombre}`)}
                     >
                       <h2 class={styles.eventTitle}>{ev.nombre}</h2>
 

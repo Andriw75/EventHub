@@ -31,8 +31,11 @@ export default function Login() {
 
     setloadingLogin(false);
   };
+  
   onMount(async () => {
-    console.log(user());
+    if (user()) {
+      navigate(`/${user()?.name}/dashboard`);
+    }
   });
 
   return (

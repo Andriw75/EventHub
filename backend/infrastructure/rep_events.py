@@ -236,10 +236,11 @@ class RepEvents:
                     "metadata": venta.metadata
                 })
 
-    async def update_rifa(self, event_id: int, update: RifaUpdate) -> EventOut:
+    async def update_rifa(self, event_id: int, user_id: int, update: RifaUpdate) -> EventOut:
         async with (await PostgresDB.acquire()) as conn:
             async with conn.transaction():
-                # 1️⃣ Actualizar Event
+
+                # 1️⃣ UPDATE Event con validación de ownership
                 fields = []
                 params = []
                 idx = 1
@@ -254,16 +255,40 @@ class RepEvents:
                         idx += 1
 
                 if fields:
-                    query = f"UPDATE Event SET {', '.join(fields)}, updated_at = CURRENT_TIMESTAMP WHERE id = ${idx} RETURNING *"
+                    query = f"""
+                        UPDATE Event 
+                        SET {', '.join(fields)}, updated_at = CURRENT_TIMESTAMP 
+                        WHERE id = ${idx} AND usuario_id = ${idx + 1}
+                        RETURNING *;
+                    """
                     params.append(event_id)
-                    event_row = await conn.fetchrow(query, *params)
-                else:
-                    event_row = await conn.fetchrow("SELECT * FROM Event WHERE id = $1", event_id)
+                    params.append(user_id)
 
-                # 2️⃣ Actualizar Rifa
+                    event_row = await conn.fetchrow(query, *params)
+
+                    if not event_row:
+                        raise HTTPException(
+                            status_code=404,
+                            detail="Evento no encontrado o no pertenece al usuario"
+                        )
+                else:
+                    # incluso aquí validamos ownership
+                    event_row = await conn.fetchrow(
+                        "SELECT * FROM Event WHERE id = $1 AND usuario_id = $2",
+                        event_id,
+                        user_id
+                    )
+                    if not event_row:
+                        raise HTTPException(
+                            status_code=404,
+                            detail="Evento no encontrado o no pertenece al usuario"
+                        )
+
+                # 2️⃣ UPDATE Rifa
                 rifa_fields = []
                 rifa_params = []
                 rifa_idx = 1
+
                 for field in ["numero_inicio", "numero_fin", "numeros_reservados"]:
                     value = getattr(update, field, None)
                     if value is not None:
@@ -273,19 +298,23 @@ class RepEvents:
 
                 if rifa_fields:
                     rifa_params.append(event_id)
-                    query_rifa = f"UPDATE Rifa SET {', '.join(rifa_fields)} WHERE event_id = ${rifa_idx}"
+                    query_rifa = f"""
+                        UPDATE Rifa 
+                        SET {', '.join(rifa_fields)} 
+                        WHERE event_id = ${rifa_idx}
+                    """
                     await conn.execute(query_rifa, *rifa_params)
 
                 return EventOut.model_validate({
                     **dict(event_row),
                     "metadata": json.loads(event_row["metadata"])
                 })
-        # ---------- ACTUALIZAR SUBASTA ----------
     
-    async def update_subasta(self, event_id: int, update: SubastaUpdate) -> EventOut:
+    async def update_subasta(self, event_id: int, user_id: int, update: SubastaUpdate) -> EventOut:
         async with (await PostgresDB.acquire()) as conn:
             async with conn.transaction():
-                # 1️⃣ Actualizar Event
+
+                # 1️⃣ UPDATE Event con ownership
                 fields = []
                 params = []
                 idx = 1
@@ -300,32 +329,54 @@ class RepEvents:
                         idx += 1
 
                 if fields:
-                    query = f"UPDATE Event SET {', '.join(fields)}, updated_at = CURRENT_TIMESTAMP WHERE id = ${idx} RETURNING *"
+                    query = f"""
+                        UPDATE Event 
+                        SET {', '.join(fields)}, updated_at = CURRENT_TIMESTAMP 
+                        WHERE id = ${idx} AND usuario_id = ${idx + 1}
+                        RETURNING *;
+                    """
                     params.append(event_id)
-                    event_row = await conn.fetchrow(query, *params)
-                else:
-                    event_row = await conn.fetchrow("SELECT * FROM Event WHERE id = $1", event_id)
+                    params.append(user_id)
 
-                # 2️⃣ Actualizar Subasta Items
+                    event_row = await conn.fetchrow(query, *params)
+
+                    if not event_row:
+                        raise HTTPException(404, "Evento no encontrado o no pertenece al usuario")
+                else:
+                    event_row = await conn.fetchrow(
+                        "SELECT * FROM Event WHERE id = $1 AND usuario_id = $2",
+                        event_id,
+                        user_id
+                    )
+                    if not event_row:
+                        raise HTTPException(404, "Evento no encontrado o no pertenece al usuario")
+
+                # 2️⃣ UPDATE Items (igual que tu lógica actual)
                 if update.items:
                     for i, item in enumerate(update.items):
                         item_fields = []
                         item_params = []
                         item_idx = 1
+
                         for field in ["nombre", "precio_maximo"]:
                             value = getattr(item, field, None)
                             if value is not None:
                                 item_fields.append(f"{field} = ${item_idx}")
                                 item_params.append(value)
                                 item_idx += 1
+
                         if item_fields:
                             item_params.append(event_id)
-                            item_params.append(i + 1)  # asumiendo que el orden de la lista corresponde a los ids
+                            item_params.append(i + 1)
+
                             query_item = f"""
                                 UPDATE SubastaItem
                                 SET {', '.join(item_fields)}
-                                WHERE subasta_id = $${item_idx} AND id = (
-                                    SELECT id FROM SubastaItem WHERE subasta_id = $${item_idx} ORDER BY id LIMIT 1 OFFSET $${item_idx + 1} - 1
+                                WHERE subasta_id = ${item_idx} AND id = (
+                                    SELECT id FROM SubastaItem 
+                                    WHERE subasta_id = ${item_idx}
+                                    ORDER BY id 
+                                    LIMIT 1 OFFSET ${item_idx + 1} - 1
                                 )
                             """
                             await conn.execute(query_item, *item_params)
@@ -335,10 +386,11 @@ class RepEvents:
                     "metadata": json.loads(event_row["metadata"])
                 })
 
-    async def update_venta_limitada(self, event_id: int, update: VentaLimitadaUpdate) -> EventOut:
+    async def update_venta_limitada(self, event_id: int, user_id: int, update: VentaLimitadaUpdate) -> EventOut:
         async with (await PostgresDB.acquire()) as conn:
             async with conn.transaction():
-                # 1️⃣ Actualizar Event
+
+                # 1️⃣ UPDATE Event con ownership
                 fields = []
                 params = []
                 idx = 1
@@ -353,32 +405,54 @@ class RepEvents:
                         idx += 1
 
                 if fields:
-                    query = f"UPDATE Event SET {', '.join(fields)}, updated_at = CURRENT_TIMESTAMP WHERE id = ${idx} RETURNING *"
+                    query = f"""
+                        UPDATE Event 
+                        SET {', '.join(fields)}, updated_at = CURRENT_TIMESTAMP 
+                        WHERE id = ${idx} AND usuario_id = ${idx + 1}
+                        RETURNING *;
+                    """
                     params.append(event_id)
-                    event_row = await conn.fetchrow(query, *params)
-                else:
-                    event_row = await conn.fetchrow("SELECT * FROM Event WHERE id = $1", event_id)
+                    params.append(user_id)
 
-                # 2️⃣ Actualizar VentaLimitada Items
+                    event_row = await conn.fetchrow(query, *params)
+
+                    if not event_row:
+                        raise HTTPException(404, "Evento no encontrado o no pertenece al usuario")
+                else:
+                    event_row = await conn.fetchrow(
+                        "SELECT * FROM Event WHERE id = $1 AND usuario_id = $2",
+                        event_id,
+                        user_id
+                    )
+                    if not event_row:
+                        raise HTTPException(404, "Evento no encontrado o no pertenece al usuario")
+
+                # 2️⃣ UPDATE Items (tu lógica actual)
                 if update.items:
                     for i, item in enumerate(update.items):
                         item_fields = []
                         item_params = []
                         item_idx = 1
+
                         for field in ["nombre", "precio", "n_cantidad_maxima", "n_cantidad_vendida"]:
                             value = getattr(item, field, None)
                             if value is not None:
                                 item_fields.append(f"{field} = ${item_idx}")
                                 item_params.append(value)
                                 item_idx += 1
+
                         if item_fields:
                             item_params.append(event_id)
                             item_params.append(i + 1)
+
                             query_item = f"""
                                 UPDATE VentaLimitadaItem
                                 SET {', '.join(item_fields)}
-                                WHERE venta_limitada_id = $${item_idx} AND id = (
-                                    SELECT id FROM VentaLimitadaItem WHERE venta_limitada_id = $${item_idx} ORDER BY id LIMIT 1 OFFSET $${item_idx + 1} - 1
+                                WHERE venta_limitada_id = ${item_idx} AND id = (
+                                    SELECT id FROM VentaLimitadaItem 
+                                    WHERE venta_limitada_id = ${item_idx}
+                                    ORDER BY id 
+                                    LIMIT 1 OFFSET ${item_idx + 1} - 1
                                 )
                             """
                             await conn.execute(query_item, *item_params)
@@ -388,3 +462,72 @@ class RepEvents:
                     "metadata": json.loads(event_row["metadata"])
                 })
     
+    async def delete_event(self, event_id: int, user_id: int) -> bool:
+        async with (await PostgresDB.acquire()) as conn:
+            async with conn.transaction():
+
+                # 1️⃣ Verificar que el evento existe y pertenece al usuario
+                event = await conn.fetchrow(
+                    """
+                    SELECT id, tipo
+                    FROM Event
+                    WHERE id = $1 AND usuario_id = $2;
+                    """,
+                    event_id,
+                    user_id
+                )
+
+                if not event:
+                    raise HTTPException(
+                        status_code=404,
+                        detail="Evento no encontrado o no pertenece al usuario"
+                    )
+
+                tipo = event["tipo"]
+
+                # 2️⃣ Eliminar según tipo
+                if tipo == "rifa":
+                    await conn.execute(
+                        "DELETE FROM Rifa WHERE event_id = $1;",
+                        event_id
+                    )
+
+                elif tipo == "subasta":
+                    # primero items
+                    await conn.execute(
+                        "DELETE FROM SubastaItem WHERE subasta_id = $1;",
+                        event_id
+                    )
+
+                    # (si tienes tabla Subasta, elimínala también)
+                    await conn.execute(
+                        "DELETE FROM Subasta WHERE event_id = $1;",
+                        event_id
+                    )
+
+                elif tipo == "venta_limitada":
+                    # primero items
+                    await conn.execute(
+                        "DELETE FROM VentaLimitadaItem WHERE venta_limitada_id = $1;",
+                        event_id
+                    )
+
+                    # (si tienes tabla VentaLimitada)
+                    await conn.execute(
+                        "DELETE FROM VentaLimitada WHERE event_id = $1;",
+                        event_id
+                    )
+
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Tipo de evento desconocido: {tipo}"
+                    )
+
+                # 3️⃣ Finalmente eliminar el evento
+                await conn.execute(
+                    "DELETE FROM Event WHERE id = $1;",
+                    event_id
+                )
+
+                return True

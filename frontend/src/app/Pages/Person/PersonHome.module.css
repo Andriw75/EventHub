@@ -1,15 +1,18 @@
+/* Container principal */
 .container {
-  padding: 2rem;
+  padding: 1.5rem;
   max-width: 900px;
   margin: 0 auto;
 }
 
+/* Título de sección */
 .title {
-  font-size: 2rem;
+  font-size: 1.8rem;
   font-weight: bold;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
+/* Mensajes de estado */
 .loading {
   color: #666;
   text-align: center;
@@ -27,70 +30,98 @@
   text-align: center;
 }
 
+/* Lista de tarjetas en grid compacto */
 .list {
   display: grid;
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
 }
 
+/* Tarjeta */
 .card {
   list-style: none;
-}
-
-.button {
-  width: 100%;
-  text-align: left;
-  padding: 1rem;
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid #eee;
   background: white;
-  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   transition: all 0.2s ease;
+  cursor: pointer;
 }
 
-.button:hover {
+.card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.eventTitle {
-  font-size: 1.2rem;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
+/* Colores según tipo de evento */
+.card.rifa {
+  border-left: 4px solid #4caf50; /* verde */
+}
+.card.subasta {
+  border-left: 4px solid #ff9800; /* naranja */
+}
+.card.venta_limitada {
+  border-left: 4px solid #2196f3; /* azul */
 }
 
+/* Botón principal dentro de la tarjeta */
+.button {
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* Cabecera de la tarjeta */
+.eventHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+/* Título de evento */
+.eventTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Meta información tipo y fecha */
 .meta {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: #555;
-  margin-bottom: 0.25rem;
+  margin: 0 0 0.2rem 0;
 }
 
 .date {
-  font-size: 0.85rem;
-  color: #888;
+  font-size: 0.75rem;
+  color: #666;
+  margin: 0;
 }
 
-.metadataTable {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 0.5rem;
+/* Estados con colores */
+.state-proximo {
+  color: #4caf50;
+  font-weight: bold;
+}
+.state-en_curso {
+  color: #ff9800;
+  font-weight: bold;
+}
+.state-finalizado {
+  color: #9e9e9e;
+  font-weight: bold;
 }
 
-.metadataTable th,
-.metadataTable td {
-  border: 1px solid #ddd;
-  padding: 0.4rem 0.6rem;
-  font-size: 0.85rem;
-}
-
-.metadataTable th {
-  background-color: #f9f9f9;
-  font-weight: 600;
-  text-align: left;
-}
-
+/* Botón expandible de metadata */
 .expandButton {
-  margin-top: 0.5rem;
-  font-size: 0.85rem;
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
   color: #0077cc;
   background: none;
   border: none;
@@ -100,4 +131,24 @@
 
 .expandButton:hover {
   text-decoration: underline;
+}
+
+/* Tabla de metadata */
+.metadataTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.metadataTable th,
+.metadataTable td {
+  border: 1px solid #ddd;
+  padding: 0.3rem 0.5rem;
+}
+
+.metadataTable th {
+  background-color: #f9f9f9;
+  font-weight: 600;
+  text-align: left;
 }

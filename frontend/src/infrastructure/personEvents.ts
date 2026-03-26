@@ -1,4 +1,4 @@
-import { handleResponse } from "./utils";
+import { handleResponse, buildQuery, toIso } from "./utils";
 import type {
   PersonEvents,
   RifaCreate,
@@ -10,22 +10,6 @@ import type {
 } from "../domain/personEvents";
 
 const API_EVENTS = `${import.meta.env.VITE_API_URL}/events`;
-
-function toIso(value?: string | null) {
-  return value ?? undefined;
-}
-
-function buildQuery(params: Record<string, string | number | undefined>) {
-  const search = new URLSearchParams();
-
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== "") {
-      search.set(key, String(value));
-    }
-  }
-
-  return search.toString();
-}
 
 export function fetchPerson(name: string, offset = 0) {
   const query = buildQuery({

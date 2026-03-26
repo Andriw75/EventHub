@@ -12,11 +12,14 @@
 
 .loading {
   color: #666;
+  text-align: center;
+  font-style: italic;
 }
 
 .error {
   color: #e53935;
   font-weight: bold;
+  text-align: center;
 }
 
 .empty {
@@ -52,14 +55,49 @@
 .eventTitle {
   font-size: 1.2rem;
   font-weight: 600;
+  margin-bottom: 0.25rem;
 }
 
 .meta {
   font-size: 0.9rem;
   color: #555;
+  margin-bottom: 0.25rem;
 }
 
 .date {
   font-size: 0.85rem;
   color: #888;
+}
+
+.metadataTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+.metadataTable th,
+.metadataTable td {
+  border: 1px solid #ddd;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.metadataTable th {
+  background-color: #f9f9f9;
+  font-weight: 600;
+  text-align: left;
+}
+
+.expandButton {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #0077cc;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.expandButton:hover {
+  text-decoration: underline;
 }

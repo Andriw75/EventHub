@@ -17,36 +17,35 @@ export type MenuItem = {
 };
 
 export const menu: MenuItem[] = [
-  {
-    label: "Auto-Respuestas",
-    key: "MenPredeter",
-    route: "/dashboard/auto-respuestas",
-    icon: { component: LoadingLoop, props: { width: "20px", height: "20px" } },
-  },
-  {
-    label: "Pendientes",
-    key: "MenPendi",
-    route: "/dashboard/pendientes",
-    icon: { component: LoadingLoop, props: { width: "20px", height: "20px" } },
-  },
-  {
-    label: "Ajustes",
-    key: "MenConfig",
-    // route: "/dashboard/config",
-    icon: {
-      component: LoadingLoop,
-      props: { width: "20px", height: "20px" },
-    },
-    submenu: [
-      {
-        label: "Algo",
-        key: "Key",
-        icon: {
-          component: LoadingLoop,
-          props: { width: "20px", height: "20px" },
-        },
-        route: "/dashboard/config",
-      },
-    ],
-  },
+  // {
+  //   label: "Auto-Respuestas",
+  //   key: "MenPredeter",
+  //   route: "/dashboard/auto-respuestas",
+  //   icon: { component: LoadingLoop, props: { width: "20px", height: "20px" } },
+  // },
+  // {
+  //   label: "Pendientes",
+  //   key: "MenPendi",
+  //   route: "/dashboard/pendientes",
+  //   icon: { component: LoadingLoop, props: { width: "20px", height: "20px" } },
+  // },
+  // {
+  //   label: "Ajustes",
+  //   key: "MenConfig",
+  //   icon: {
+  //     component: LoadingLoop,
+  //     props: { width: "20px", height: "20px" },
+  //   },
+  //   submenu: [
+  //     {
+  //       label: "Algo",
+  //       key: "Key",
+  //       icon: {
+  //         component: LoadingLoop,
+  //         props: { width: "20px", height: "20px" },
+  //       },
+  //       route: "/dashboard/config",
+  //     },
+  //   ],
+  // },
 ];

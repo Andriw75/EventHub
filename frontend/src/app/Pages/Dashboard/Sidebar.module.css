@@ -1,7 +1,7 @@
 .sidebar {
   width: 240px;
-  background: var(--sidebar-bg);
-  color: var(--sidebar-contrast);
+  background: #111; /* negro oscuro */
+  color: #eee; /* texto blanco/gris claro */
   padding: 24px 16px;
   display: flex;
   flex-direction: column;
@@ -39,19 +39,19 @@
   border-radius: 8px;
   margin-bottom: 12px;
   font-size: 1.25rem;
-  background: var(--bg-overlay);
+  background: #1b1b1b;
   transition: all 0.22s ease;
 }
 
 .userSection:hover {
-  background: var(--user-bg-hover);
+  background: #2a2a2a;
   transform: translateX(2px);
 }
 
 .userIcon {
   font-size: 24px;
   flex-shrink: 0;
-  color: var(--sidebar-contrast);
+  color: #eee;
 }
 
 .userName {
@@ -87,7 +87,7 @@
 .button {
   background-color: transparent;
   border: none;
-  color: var(--sidebar-contrast);
+  color: #eee;
   padding: 12px 16px;
   cursor: pointer;
   font-size: 0.9375rem;
@@ -115,13 +115,13 @@
 
 .button:hover::before {
   width: 4px;
-  background: var(--secondary);
+  background: #888;
 }
 
 .button:hover {
-  background-color: var(--menu-hover);
+  background-color: #222;
   transform: translateX(4px);
-  box-shadow: 0 4px 12px var(--shadow);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .button:hover .menuIcon {
@@ -129,17 +129,17 @@
 }
 
 .active {
-  background-color: rgba(var(--secondary-rgb), 0.12) !important;
-  border-left: 3px solid var(--secondary);
+  background-color: rgba(136, 136, 136, 0.12) !important;
+  border-left: 3px solid #888;
 }
 
 .active .menuIcon {
-  color: var(--secondary);
+  color: #888;
 }
 
 .active::before {
   width: 4px !important;
-  background: var(--secondary);
+  background: #888;
 }
 
 .menuIcon {
@@ -147,7 +147,7 @@
   width: 20px;
   height: 20px;
   transition: all 0.22s ease;
-  color: var(--color-icon-side);
+  color: #ccc;
 }
 
 .menuText {
@@ -163,7 +163,7 @@
 .submenu {
   padding-left: 40px;
   margin-top: 4px;
-  border-left: 2px solid var(--submenu-border);
+  border-left: 2px solid #333;
   animation: slideDown 0.28s ease-out;
 }
 
@@ -189,12 +189,12 @@
   border-radius: 8px;
   user-select: none;
   transition: all 0.22s ease;
-  color: var(--sidebar-contrast);
+  color: #eee;
   gap: 12px;
 }
 
 .toggleLabel:hover {
-  background-color: var(--menu-hover);
+  background-color: #222;
   transform: translateX(4px);
 }
 
@@ -212,7 +212,7 @@
 }
 
 .toggleLabel:hover .arrow {
-  color: var(--secondary);
+  color: #888;
 }
 
 .arrow.open {
@@ -221,9 +221,9 @@
 
 /* logout */
 .logoutButton {
-  background: var(--secondary);
+  background: #888;
   border: none;
-  color: white;
+  color: #fff;
   padding: 12px 16px;
   cursor: pointer;
   font-size: 0.9375rem;
@@ -236,12 +236,12 @@
   justify-content: center;
   gap: 8px;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(var(--secondary-rgb), 0.14);
+  box-shadow: 0 2px 8px rgba(136, 136, 136, 0.14);
 }
 
 .logoutButton:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(var(--secondary-rgb), 0.22);
+  box-shadow: 0 4px 12px rgba(136, 136, 136, 0.22);
 }
 
 .logoutIcon {
@@ -257,7 +257,7 @@
   transition: all 0.22s ease;
 }
 
-/* custom tooltip when collapsed */
+/* tooltip cuando colapsado */
 .sidebar.collapsed .menuItem:hover .menuText {
   opacity: 1;
   width: auto;
@@ -265,8 +265,8 @@
   left: 100%;
   top: 50%;
   transform: translateY(-50%);
-  background: var(--secondary);
-  color: white;
+  background: #444;
+  color: #fff;
   padding: 8px 12px;
   border-radius: 4px;
   margin-left: 8px;
@@ -281,7 +281,7 @@
   left: 100%;
   top: 50%;
   transform: translateY(-50%);
-  border-left: 6px solid var(--secondary);
+  border-left: 6px solid #444;
   border-top: 6px solid transparent;
   border-bottom: 6px solid transparent;
   margin-left: -1px;
@@ -327,7 +327,7 @@
 .button:focus-visible,
 .toggleLabel:focus-visible,
 .logoutButton:focus-visible {
-  outline: 3px solid rgba(var(--secondary-rgb), 0.24);
+  outline: 3px solid rgba(136, 136, 136, 0.24);
   outline-offset: 2px;
 }
 
@@ -342,6 +342,7 @@
     transform: scale(1);
   }
 }
+
 .menuIcon.pulse {
   animation: pulse 2s infinite;
 }

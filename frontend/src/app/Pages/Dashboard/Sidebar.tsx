@@ -165,7 +165,15 @@ const Sidebar: Component<SidebarProps> = (props) => {
   };
 
   const handleSelect = (item: MenuItem) => {
-    if (item.route) navigate(item.route);
+    if (item.route) {
+      const username = auth.user()?.name;
+      if (!username) return;
+
+      const path = item.route.replace(":person", username);
+      console.log(path);
+      navigate(path);
+    }
+
     if (isMobile() && isExpandedMobile()) setIsExpandedMobile(false);
   };
 

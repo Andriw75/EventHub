@@ -14,7 +14,7 @@ export default function App() {
 
       <Route path="/:person" component={() => <PersonHome />} />
 
-      <Route path="/:person/dashboard" component={() => <DashboardLayout />} />
+      <Route path="/:person/dashboard" component={DashboardLayout} />
       <Route path="/:person/:event" component={() => <EventDetails />} />
 
       <Route path="/" component={() => <Navigate href="/login" />} />

@@ -1,16 +1,17 @@
 import { type ParentComponent, createSignal, onMount } from "solid-js";
+import { useParams, useNavigate } from "@solidjs/router";
 import Sidebar from "./Sidebar";
 import styles from "./DashboardLayout.module.css";
 import { useAuth } from "../../context/auth";
-import { useNavigate } from "@solidjs/router";
 
 const DashboardLayout: ParentComponent = (props) => {
   const [sidebarCollapsed, setSidebarCollapsed] = createSignal(false);
   const { user } = useAuth();
   const nav = useNavigate();
+  const params = useParams();
 
   onMount(() => {
-    if (!user()) {
+    if (!user() || user()?.name !== params.person) {
       nav("/login", { replace: true });
       return;
     }

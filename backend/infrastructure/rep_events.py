@@ -6,6 +6,10 @@ from domain.events import EventOut,RifaCreate,SubastaCreate,VentaLimitadaCreate,
 from infrastructure._db._db import PostgresDB
 from fastapi import HTTPException, status
 
+def parse_metadata(value):
+    if isinstance(value, str):
+        return json.loads(value)
+    return value
 
 class RepEvents:
     LIMIT = 15
@@ -236,232 +240,6 @@ class RepEvents:
                     "metadata": venta.metadata
                 })
 
-    async def update_rifa(self, event_id: int, user_id: int, update: RifaUpdate) -> EventOut:
-        async with (await PostgresDB.acquire()) as conn:
-            async with conn.transaction():
-
-                # 1️⃣ UPDATE Event con validación de ownership
-                fields = []
-                params = []
-                idx = 1
-
-                for field in ["nombre", "fecha_inicio", "fecha_fin", "metadata", "estado"]:
-                    value = getattr(update, field, None)
-                    if value is not None:
-                        if field == "metadata":
-                            value = json.dumps(value)
-                        fields.append(f"{field} = ${idx}")
-                        params.append(value)
-                        idx += 1
-
-                if fields:
-                    query = f"""
-                        UPDATE Event 
-                        SET {', '.join(fields)}, updated_at = CURRENT_TIMESTAMP 
-                        WHERE id = ${idx} AND usuario_id = ${idx + 1}
-                        RETURNING *;
-                    """
-                    params.append(event_id)
-                    params.append(user_id)
-
-                    event_row = await conn.fetchrow(query, *params)
-
-                    if not event_row:
-                        raise HTTPException(
-                            status_code=404,
-                            detail="Evento no encontrado o no pertenece al usuario"
-                        )
-                else:
-                    # incluso aquí validamos ownership
-                    event_row = await conn.fetchrow(
-                        "SELECT * FROM Event WHERE id = $1 AND usuario_id = $2",
-                        event_id,
-                        user_id
-                    )
-                    if not event_row:
-                        raise HTTPException(
-                            status_code=404,
-                            detail="Evento no encontrado o no pertenece al usuario"
-                        )
-
-                # 2️⃣ UPDATE Rifa
-                rifa_fields = []
-                rifa_params = []
-                rifa_idx = 1
-
-                for field in ["numero_inicio", "numero_fin", "numeros_reservados"]:
-                    value = getattr(update, field, None)
-                    if value is not None:
-                        rifa_fields.append(f"{field} = ${rifa_idx}")
-                        rifa_params.append(value)
-                        rifa_idx += 1
-
-                if rifa_fields:
-                    rifa_params.append(event_id)
-                    query_rifa = f"""
-                        UPDATE Rifa 
-                        SET {', '.join(rifa_fields)} 
-                        WHERE event_id = ${rifa_idx}
-                    """
-                    await conn.execute(query_rifa, *rifa_params)
-
-                return EventOut.model_validate({
-                    **dict(event_row),
-                    "metadata": json.loads(event_row["metadata"])
-                })
-    
-    async def update_subasta(self, event_id: int, user_id: int, update: SubastaUpdate) -> EventOut:
-        async with (await PostgresDB.acquire()) as conn:
-            async with conn.transaction():
-
-                # 1️⃣ UPDATE Event con ownership
-                fields = []
-                params = []
-                idx = 1
-
-                for field in ["nombre", "fecha_inicio", "fecha_fin", "metadata", "estado"]:
-                    value = getattr(update, field, None)
-                    if value is not None:
-                        if field == "metadata":
-                            value = json.dumps(value)
-                        fields.append(f"{field} = ${idx}")
-                        params.append(value)
-                        idx += 1
-
-                if fields:
-                    query = f"""
-                        UPDATE Event 
-                        SET {', '.join(fields)}, updated_at = CURRENT_TIMESTAMP 
-                        WHERE id = ${idx} AND usuario_id = ${idx + 1}
-                        RETURNING *;
-                    """
-                    params.append(event_id)
-                    params.append(user_id)
-
-                    event_row = await conn.fetchrow(query, *params)
-
-                    if not event_row:
-                        raise HTTPException(404, "Evento no encontrado o no pertenece al usuario")
-                else:
-                    event_row = await conn.fetchrow(
-                        "SELECT * FROM Event WHERE id = $1 AND usuario_id = $2",
-                        event_id,
-                        user_id
-                    )
-                    if not event_row:
-                        raise HTTPException(404, "Evento no encontrado o no pertenece al usuario")
-
-                # 2️⃣ UPDATE Items (igual que tu lógica actual)
-                if update.items:
-                    for i, item in enumerate(update.items):
-                        item_fields = []
-                        item_params = []
-                        item_idx = 1
-
-                        for field in ["nombre", "precio_maximo"]:
-                            value = getattr(item, field, None)
-                            if value is not None:
-                                item_fields.append(f"{field} = ${item_idx}")
-                                item_params.append(value)
-                                item_idx += 1
-
-                        if item_fields:
-                            item_params.append(event_id)
-                            item_params.append(i + 1)
-
-                            query_item = f"""
-                                UPDATE SubastaItem
-                                SET {', '.join(item_fields)}
-                                WHERE subasta_id = ${item_idx} AND id = (
-                                    SELECT id FROM SubastaItem 
-                                    WHERE subasta_id = ${item_idx}
-                                    ORDER BY id 
-                                    LIMIT 1 OFFSET ${item_idx + 1} - 1
-                                )
-                            """
-                            await conn.execute(query_item, *item_params)
-
-                return EventOut.model_validate({
-                    **dict(event_row),
-                    "metadata": json.loads(event_row["metadata"])
-                })
-
-    async def update_venta_limitada(self, event_id: int, user_id: int, update: VentaLimitadaUpdate) -> EventOut:
-        async with (await PostgresDB.acquire()) as conn:
-            async with conn.transaction():
-
-                # 1️⃣ UPDATE Event con ownership
-                fields = []
-                params = []
-                idx = 1
-
-                for field in ["nombre", "fecha_inicio", "fecha_fin", "metadata", "estado"]:
-                    value = getattr(update, field, None)
-                    if value is not None:
-                        if field == "metadata":
-                            value = json.dumps(value)
-                        fields.append(f"{field} = ${idx}")
-                        params.append(value)
-                        idx += 1
-
-                if fields:
-                    query = f"""
-                        UPDATE Event 
-                        SET {', '.join(fields)}, updated_at = CURRENT_TIMESTAMP 
-                        WHERE id = ${idx} AND usuario_id = ${idx + 1}
-                        RETURNING *;
-                    """
-                    params.append(event_id)
-                    params.append(user_id)
-
-                    event_row = await conn.fetchrow(query, *params)
-
-                    if not event_row:
-                        raise HTTPException(404, "Evento no encontrado o no pertenece al usuario")
-                else:
-                    event_row = await conn.fetchrow(
-                        "SELECT * FROM Event WHERE id = $1 AND usuario_id = $2",
-                        event_id,
-                        user_id
-                    )
-                    if not event_row:
-                        raise HTTPException(404, "Evento no encontrado o no pertenece al usuario")
-
-                # 2️⃣ UPDATE Items (tu lógica actual)
-                if update.items:
-                    for i, item in enumerate(update.items):
-                        item_fields = []
-                        item_params = []
-                        item_idx = 1
-
-                        for field in ["nombre", "precio", "n_cantidad_maxima", "n_cantidad_vendida"]:
-                            value = getattr(item, field, None)
-                            if value is not None:
-                                item_fields.append(f"{field} = ${item_idx}")
-                                item_params.append(value)
-                                item_idx += 1
-
-                        if item_fields:
-                            item_params.append(event_id)
-                            item_params.append(i + 1)
-
-                            query_item = f"""
-                                UPDATE VentaLimitadaItem
-                                SET {', '.join(item_fields)}
-                                WHERE venta_limitada_id = ${item_idx} AND id = (
-                                    SELECT id FROM VentaLimitadaItem 
-                                    WHERE venta_limitada_id = ${item_idx}
-                                    ORDER BY id 
-                                    LIMIT 1 OFFSET ${item_idx + 1} - 1
-                                )
-                            """
-                            await conn.execute(query_item, *item_params)
-
-                return EventOut.model_validate({
-                    **dict(event_row),
-                    "metadata": json.loads(event_row["metadata"])
-                })
-    
     async def delete_event(self, event_id: int, user_id: int) -> bool:
         async with (await PostgresDB.acquire()) as conn:
             async with conn.transaction():
@@ -531,3 +309,257 @@ class RepEvents:
                 )
 
                 return True
+
+    async def update_rifa(self, event_id: int, user_id: int, data: RifaUpdate) -> EventOut:
+        async with (await PostgresDB.acquire()) as conn:
+            async with conn.transaction():
+                # 1. Verificar que el evento existe y pertenece al usuario
+                event = await conn.fetchrow(
+                    """
+                    SELECT id, tipo, metadata
+                    FROM Event
+                    WHERE id = $1 AND usuario_id = $2
+                    """,
+                    event_id, user_id
+                )
+                if not event:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Evento no encontrado o no pertenece al usuario"
+                    )
+                if event["tipo"] != "rifa":
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="El evento no es de tipo rifa"
+                    )
+
+                # 2. Actualizar campos de la tabla Event (dinámicamente)
+                update_fields = []
+                params = []
+                param_idx = 1
+
+                if data.nombre is not None:
+                    update_fields.append(f"nombre = ${param_idx}")
+                    params.append(data.nombre)
+                    param_idx += 1
+                if data.fecha_inicio is not None:
+                    update_fields.append(f"fecha_inicio = ${param_idx}")
+                    params.append(data.fecha_inicio)
+                    param_idx += 1
+                if data.fecha_fin is not None:
+                    update_fields.append(f"fecha_fin = ${param_idx}")
+                    params.append(data.fecha_fin)
+                    param_idx += 1
+                if data.metadata is not None:
+                    update_fields.append(f"metadata = ${param_idx}")
+                    params.append(json.dumps(data.metadata))
+                    param_idx += 1
+                if data.estado is not None:
+                    update_fields.append(f"estado = ${param_idx}")
+                    params.append(data.estado.value)
+                    param_idx += 1
+
+                if update_fields:
+                    query = f"""
+                        UPDATE Event
+                        SET {', '.join(update_fields)}, updated_at = NOW()
+                        WHERE id = ${param_idx}
+                        RETURNING *
+                    """
+                    params.append(event_id)
+                    event_row = await conn.fetchrow(query, *params)
+                else:
+                    # Si no se actualiza ningún campo de Event, obtener los datos actuales
+                    event_row = await conn.fetchrow(
+                        "SELECT * FROM Event WHERE id = $1", event_id
+                    )
+
+                # 3. Actualizar campos de la tabla Rifa (dinámicamente)
+                update_rifa_fields = []
+                rifa_params = []
+                rifa_idx = 1
+
+                if data.numero_inicio is not None:
+                    update_rifa_fields.append(f"numero_inicio = ${rifa_idx}")
+                    rifa_params.append(data.numero_inicio)
+                    rifa_idx += 1
+                if data.numero_fin is not None:
+                    update_rifa_fields.append(f"numero_fin = ${rifa_idx}")
+                    rifa_params.append(data.numero_fin)
+                    rifa_idx += 1
+                if data.numeros_reservados is not None:
+                    update_rifa_fields.append(f"numeros_reservados = ${rifa_idx}")
+                    rifa_params.append(data.numeros_reservados)  # ya es lista, se serializa automáticamente? asynpg lo maneja como JSONB si la columna es jsonb
+                    rifa_idx += 1
+
+                if update_rifa_fields:
+                    query = f"""
+                        UPDATE Rifa
+                        SET {', '.join(update_rifa_fields)}
+                        WHERE event_id = ${rifa_idx}
+                    """
+                    rifa_params.append(event_id)
+                    await conn.execute(query, *rifa_params)
+
+                # 4. Devolver el evento actualizado (reconstruir metadata)
+                return EventOut.model_validate({
+                    **dict(event_row),
+                    "metadata": json.loads(event_row["metadata"]) if isinstance(event_row["metadata"], str) else event_row["metadata"]
+                })
+
+    async def update_subasta(self, event_id: int, user_id: int, data: SubastaUpdate) -> EventOut:
+        async with (await PostgresDB.acquire()) as conn:
+            async with conn.transaction():
+                # 1. Verificar evento y tipo
+                event = await conn.fetchrow(
+                    """
+                    SELECT id, tipo, metadata
+                    FROM Event
+                    WHERE id = $1 AND usuario_id = $2
+                    """,
+                    event_id, user_id
+                )
+                if not event:
+                    raise HTTPException(status_code=404, detail="Evento no encontrado o no pertenece al usuario")
+                if event["tipo"] != "subasta":
+                    raise HTTPException(status_code=400, detail="El evento no es de tipo subasta")
+
+                # 2. Actualizar Event (igual que en rifa)
+                update_fields = []
+                params = []
+                param_idx = 1
+
+                if data.nombre is not None:
+                    update_fields.append(f"nombre = ${param_idx}")
+                    params.append(data.nombre)
+                    param_idx += 1
+                if data.fecha_inicio is not None:
+                    update_fields.append(f"fecha_inicio = ${param_idx}")
+                    params.append(data.fecha_inicio)
+                    param_idx += 1
+                if data.fecha_fin is not None:
+                    update_fields.append(f"fecha_fin = ${param_idx}")
+                    params.append(data.fecha_fin)
+                    param_idx += 1
+                if data.metadata is not None:
+                    update_fields.append(f"metadata = ${param_idx}")
+                    params.append(json.dumps(data.metadata))
+                    param_idx += 1
+                if data.estado is not None:
+                    update_fields.append(f"estado = ${param_idx}")
+                    params.append(data.estado.value)
+                    param_idx += 1
+
+                if update_fields:
+                    query = f"""
+                        UPDATE Event
+                        SET {', '.join(update_fields)}, updated_at = NOW()
+                        WHERE id = ${param_idx}
+                        RETURNING *
+                    """
+                    params.append(event_id)
+                    event_row = await conn.fetchrow(query, *params)
+                else:
+                    event_row = await conn.fetchrow("SELECT * FROM Event WHERE id = $1", event_id)
+
+                # 3. Manejo de items
+                if data.items is not None:
+                    # Eliminar items existentes
+                    await conn.execute(
+                        "DELETE FROM SubastaItem WHERE subasta_id = $1",
+                        event_id
+                    )
+                    # Insertar nuevos items
+                    for item in data.items:
+                        await conn.execute(
+                            """
+                            INSERT INTO SubastaItem (subasta_id, nombre, precio_maximo)
+                            VALUES ($1, $2, $3)
+                            """,
+                            event_id, item.nombre, item.precio_maximo
+                        )
+
+                # 4. Devolver evento
+                return EventOut.model_validate({
+                    **dict(event_row),
+                    "metadata": json.loads(event_row["metadata"]) if isinstance(event_row["metadata"], str) else event_row["metadata"]
+                })
+
+    async def update_venta_limitada(self, event_id: int, user_id: int, data: VentaLimitadaUpdate) -> EventOut:
+        async with (await PostgresDB.acquire()) as conn:
+            async with conn.transaction():
+                # 1. Verificar evento y tipo
+                event = await conn.fetchrow(
+                    """
+                    SELECT id, tipo, metadata
+                    FROM Event
+                    WHERE id = $1 AND usuario_id = $2
+                    """,
+                    event_id, user_id
+                )
+                if not event:
+                    raise HTTPException(status_code=404, detail="Evento no encontrado o no pertenece al usuario")
+                if event["tipo"] != "venta_limitada":
+                    raise HTTPException(status_code=400, detail="El evento no es de tipo venta limitada")
+
+                # 2. Actualizar Event (igual que antes)
+                update_fields = []
+                params = []
+                param_idx = 1
+
+                if data.nombre is not None:
+                    update_fields.append(f"nombre = ${param_idx}")
+                    params.append(data.nombre)
+                    param_idx += 1
+                if data.fecha_inicio is not None:
+                    update_fields.append(f"fecha_inicio = ${param_idx}")
+                    params.append(data.fecha_inicio)
+                    param_idx += 1
+                if data.fecha_fin is not None:
+                    update_fields.append(f"fecha_fin = ${param_idx}")
+                    params.append(data.fecha_fin)
+                    param_idx += 1
+                if data.metadata is not None:
+                    update_fields.append(f"metadata = ${param_idx}")
+                    params.append(json.dumps(data.metadata))
+                    param_idx += 1
+                if data.estado is not None:
+                    update_fields.append(f"estado = ${param_idx}")
+                    params.append(data.estado.value)
+                    param_idx += 1
+
+                if update_fields:
+                    query = f"""
+                        UPDATE Event
+                        SET {', '.join(update_fields)}, updated_at = NOW()
+                        WHERE id = ${param_idx}
+                        RETURNING *
+                    """
+                    params.append(event_id)
+                    event_row = await conn.fetchrow(query, *params)
+                else:
+                    event_row = await conn.fetchrow("SELECT * FROM Event WHERE id = $1", event_id)
+
+                # 3. Manejo de items
+                if data.items is not None:
+                    # Eliminar items existentes
+                    await conn.execute(
+                        "DELETE FROM VentaLimitadaItem WHERE venta_limitada_id = $1",
+                        event_id
+                    )
+                    # Insertar nuevos items
+                    for item in data.items:
+                        await conn.execute(
+                            """
+                            INSERT INTO VentaLimitadaItem (venta_limitada_id, nombre, precio, n_cantidad_maxima)
+                            VALUES ($1, $2, $3, $4)
+                            """,
+                            event_id, item.nombre, item.precio, item.n_cantidad_maxima
+                        )
+
+                # 4. Devolver evento
+                return EventOut.model_validate({
+                    **dict(event_row),
+                    "metadata": json.loads(event_row["metadata"]) if isinstance(event_row["metadata"], str) else event_row["metadata"]
+                })
+

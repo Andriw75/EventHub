@@ -63,6 +63,31 @@ CREATE TABLE EventAudit (
     changed_data JSONB NOT NULL,
     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE OR REPLACE FUNCTION jsonb_diff(a JSONB, b JSONB) RETURNS JSONB AS $$
+DECLARE
+    result JSONB := '{}';
+    key TEXT;
+    value_a JSONB;
+    value_b JSONB;
+BEGIN
+    FOR key IN SELECT * FROM jsonb_object_keys(a)
+    LOOP
+        value_a := a -> key;
+        value_b := b -> key;
+        IF value_b IS NULL THEN
+            result := result || jsonb_build_object(key, value_a);
+        ELSE
+            IF value_a IS DISTINCT FROM value_b THEN
+                result := result || jsonb_build_object(key, value_a);
+            END IF;
+        END IF;
+    END LOOP;
+    RETURN result;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+
 CREATE OR REPLACE FUNCTION audit_event_changes() RETURNS TRIGGER AS $$
 DECLARE
     data JSONB;
@@ -73,7 +98,7 @@ BEGIN
         VALUES (TG_TABLE_NAME, NEW.id, 'I', data);
 
     ELSIF TG_OP = 'UPDATE' THEN
-        data := jsonb_strip_nulls(to_jsonb(NEW) - to_jsonb(OLD));
+        data := jsonb_diff(to_jsonb(NEW), to_jsonb(OLD));
         IF data <> '{}' THEN
             INSERT INTO EventAudit(event_type, event_id, operation, changed_data)
             VALUES (TG_TABLE_NAME, NEW.id, 'U', data);

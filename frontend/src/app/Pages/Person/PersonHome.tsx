@@ -7,9 +7,19 @@ export default function PersonHome() {
   const params = useParams();
   const navigate = useNavigate();
 
-  const [personData] = createResource(() => params.person, fetchPerson);
+  const [personData] = createResource(
+    () => params.person,
+    (person) => fetchPerson(person, 0),
+  );
 
-  const events = () => personData()?.data;
+  // helpers
+  const events = () => personData()?.data ?? [];
+  const error = () => personData()?.error;
+
+  function formatDate(date: string | null) {
+    if (!date) return "Sin fecha";
+    return new Date(date).toLocaleDateString();
+  }
 
   return (
     <div class={styles.container}>
@@ -17,47 +27,42 @@ export default function PersonHome() {
         <p class={styles.loading}>Cargando eventos...</p>
       </Show>
 
-      <Show when={personData()?.error}>
-        {(err) => (
-          <p class={styles.error}>Error: {err().detail || "Error al cargar"}</p>
-        )}
+      <Show when={error()}>
+        <p class={styles.error}>
+          Error: {error()?.detail || "Error al cargar"}
+        </p>
       </Show>
 
-      <Show when={events()}>
-        {(evs) => (
-          <>
-            <h1 class={styles.title}>Eventos de {params.person}</h1>
+      <Show when={events().length > 0}>
+        <h1 class={styles.title}>Eventos de {params.person}</h1>
 
-            <ul class={styles.list}>
-              <For each={evs()}>
-                {(ev) => (
-                  <li class={styles.card}>
-                    <button
-                      class={styles.button}
-                      onClick={() => navigate(`/${params.person}/${ev.nombre}`)}
-                    >
-                      <h2 class={styles.eventTitle}>{ev.nombre}</h2>
+        <ul class={styles.list}>
+          <For each={events()}>
+            {(ev) => (
+              <li class={styles.card}>
+                <button
+                  class={styles.button}
+                  onClick={
+                    () => navigate(`/${params.person}/${ev.id}`) // 🔥 mejor usar id, no nombre
+                  }
+                >
+                  <h2 class={styles.eventTitle}>{ev.nombre}</h2>
 
-                      <p class={styles.meta}>Tipo: {ev.tipo}</p>
+                  <p class={styles.meta}>Tipo: {ev.tipo}</p>
 
-                      <p class={styles.meta}>Estado: {ev.estado}</p>
+                  <p class={styles.meta}>Estado: {ev.estado}</p>
 
-                      <p class={styles.date}>
-                        {new Date(ev.fecha_inicio).toLocaleDateString()} -{" "}
-                        {new Date(ev.fecha_fin).toLocaleDateString()}
-                      </p>
-                    </button>
-                  </li>
-                )}
-              </For>
-            </ul>
-          </>
-        )}
+                  <p class={styles.date}>
+                    {formatDate(ev.fecha_inicio)} - {formatDate(ev.fecha_fin)}
+                  </p>
+                </button>
+              </li>
+            )}
+          </For>
+        </ul>
       </Show>
 
-      <Show
-        when={!personData.loading && !personData()?.error && !events()?.length}
-      >
+      <Show when={!personData.loading && !error() && events().length === 0}>
         <p class={styles.empty}>No hay eventos disponibles</p>
       </Show>
     </div>

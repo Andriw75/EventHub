@@ -94,7 +94,7 @@ class UserService:
                         password,
                         permissions
                     FROM "User"
-                    WHERE username = $1;
+                    WHERE username = $1 AND estado = TRUE;
                     """,
                     user_name
                 )

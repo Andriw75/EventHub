@@ -1,4 +1,4 @@
-ALTER DATABASE railway SET timezone TO 'America/Lima';
+ALTER DATABASE "instancia-postgres" SET timezone TO 'America/Lima';
 
 CREATE TABLE "User" (
     id SERIAL PRIMARY KEY,

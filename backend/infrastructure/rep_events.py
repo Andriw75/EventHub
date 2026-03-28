@@ -1,7 +1,10 @@
 import json
 from datetime import datetime
 from typing import Optional
-from domain.events import EventOut,RifaCreate,SubastaCreate,VentaLimitadaCreate,RifaUpdate,SubastaUpdate,VentaLimitadaUpdate
+from domain.events import ( EventOut, EventType, EventFullOut,
+                            RifaCreate, RifaUpdate, RifaOut, 
+                            SubastaCreate, SubastaUpdate, SubastaOut,
+                            VentaLimitadaCreate, VentaLimitadaUpdate, VentaLimitadaOut )
 
 from infrastructure._db._db import PostgresDB
 from fastapi import HTTPException, status
@@ -562,4 +565,136 @@ class RepEvents:
                     **dict(event_row),
                     "metadata": json.loads(event_row["metadata"]) if isinstance(event_row["metadata"], str) else event_row["metadata"]
                 })
+
+    async def list_events_by_type_len(
+        self,
+        user_id:int,
+        tipo: EventType,
+        fecha_inicio: Optional[datetime] = None,
+        fecha_fin: Optional[datetime] = None,
+    ) -> int:
+        try:
+            async with (await PostgresDB.acquire()) as conn:
+
+                filters = ["e.tipo = $2"]
+                params = [user_id, tipo.value]
+                param_idx = 3
+
+                if fecha_inicio:
+                    filters.append(f"e.fecha_inicio >= ${param_idx}")
+                    params.append(fecha_inicio)
+                    param_idx += 1
+
+                if fecha_fin:
+                    filters.append(f"e.fecha_fin <= ${param_idx}")
+                    params.append(fecha_fin)
+                    param_idx += 1
+
+                where_clause = " AND ".join(filters)
+
+                query = f"""
+                    SELECT COUNT(*) as total
+                    FROM Event e
+                    WHERE e.usuario_id = $1 AND {where_clause};
+                """
+
+                row = await conn.fetchrow(query, *params)
+                return row["total"]
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(500, str(e))
+
+    async def list_events_by_type(
+        self,
+        user_id: int,
+        tipo: EventType,
+        offset: int = 0,
+        fecha_inicio: Optional[datetime] = None,
+        fecha_fin: Optional[datetime] = None,
+    ) -> list[EventFullOut]:
+        try:
+            async with (await PostgresDB.acquire()) as conn:
+
+                filters = ["e.tipo = $2"]
+                params = [user_id, tipo.value]
+                param_idx = 3
+
+                if fecha_inicio:
+                    filters.append(f"e.fecha_inicio >= ${param_idx}")
+                    params.append(fecha_inicio)
+                    param_idx += 1
+
+                if fecha_fin:
+                    filters.append(f"e.fecha_fin <= ${param_idx}")
+                    params.append(fecha_fin)
+                    param_idx += 1
+
+                where_clause = " AND ".join(filters)
+
+                query = f"""
+                    SELECT *
+                    FROM Event e
+                    WHERE e.usuario_id = $1 AND {where_clause}
+                    ORDER BY e.fecha_inicio DESC
+                    LIMIT {self.LIMIT} OFFSET {offset};
+                """
+
+                rows = await conn.fetch(query, *params)
+
+                results: list[EventFullOut] = []
+
+                for r in rows:
+                    base = {
+                        **dict(r),
+                        "metadata": parse_metadata(r["metadata"]),
+                    }
+
+                    if tipo == EventType.rifa:
+                        rifa = await conn.fetchrow(
+                            "SELECT * FROM Rifa WHERE event_id = $1",
+                            r["id"]
+                        )
+                        results.append(
+                            RifaOut.model_validate({
+                                **base,
+                                **dict(rifa)
+                            })
+                        )
+
+                    elif tipo == EventType.subasta:
+                        items = await conn.fetch(
+                            "SELECT nombre, precio_maximo FROM SubastaItem WHERE subasta_id = $1",
+                            r["id"]
+                        )
+                        results.append(
+                            SubastaOut.model_validate({
+                                **base,
+                                "items": [dict(i) for i in items]
+                            })
+                        )
+
+                    elif tipo == EventType.venta_limitada:
+                        items = await conn.fetch(
+                            """
+                            SELECT nombre, precio, n_cantidad_maxima
+                            FROM VentaLimitadaItem
+                            WHERE venta_limitada_id = $1
+                            """,
+                            r["id"]
+                        )
+                        results.append(
+                            VentaLimitadaOut.model_validate({
+                                **base,
+                                "items": [dict(i) for i in items]
+                            })
+                        )
+
+                return results
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(500, str(e))
 

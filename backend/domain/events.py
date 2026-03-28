@@ -1,7 +1,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from pydantic import BaseModel, Field, constr, conint, field_validator
 
 # ---------- ENUMS ----------
@@ -25,7 +25,7 @@ class EventOut(BaseModel):
     fecha_inicio: Optional[datetime] = None
     fecha_fin: Optional[datetime] = None
     metadata: Optional[Dict[str, Any]] = {}
-    created_at: datetime
+    # created_at: datetime
 
     model_config = {
         "from_attributes": True
@@ -59,6 +59,11 @@ class RifaUpdate(BaseModel):
     metadata: Optional[Dict[str, Any]] | None = None
     estado: Optional[EventState] | None = None
 
+class RifaOut(EventOut):
+    numero_inicio: int
+    numero_fin: int
+    numeros_reservados: List[int]
+
 # ---------- SUBASTA ----------
 class SubastaItemCreate(BaseModel):
     nombre: str
@@ -91,6 +96,12 @@ class SubastaUpdate(BaseModel):
     metadata: Optional[Dict[str, Any]] | None = None
     estado: Optional[EventState] | None = None
 
+class SubastaItemOut(BaseModel):
+    nombre: str
+    precio_maximo: float
+
+class SubastaOut(EventOut):
+    items: List[SubastaItemOut]
 # ---------- VENTA LIMITADA ----------
 class VentaLimitadaItemCreate(BaseModel):
     nombre: str
@@ -125,3 +136,13 @@ class VentaLimitadaUpdate(BaseModel):
     items: Optional[List[VentaLimitadaItemUpdate]] | None = None
     metadata: Optional[Dict[str, Any]] | None = None
     estado: Optional[EventState] | None = None
+
+class VentaLimitadaItemOut(BaseModel):
+    nombre: str
+    precio: float
+    n_cantidad_maxima: int
+
+class VentaLimitadaOut(EventOut):
+    items: List[VentaLimitadaItemOut]
+
+EventFullOut = Union[RifaOut, SubastaOut, VentaLimitadaOut]

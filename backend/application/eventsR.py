@@ -3,7 +3,7 @@ from typing import Optional
 from datetime import datetime
 
 from domain.events import (
-    EventOut,
+    EventOut, EventType, EventFullOut,
     RifaCreate, SubastaCreate, VentaLimitadaCreate,
     RifaUpdate, SubastaUpdate, VentaLimitadaUpdate
 )
@@ -42,6 +42,36 @@ def eventsR(container: ServiceContainer, auth_router: AuthRouter):
     ):
         return await rep_events.list_events_len(
             nombre_usuario=user_name,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin
+        )
+
+    @router.get("/by-type", response_model=list[EventFullOut])
+    async def list_events_by_type(
+        tipo: EventType,
+        current_user: UserCokie = Depends(auth_router.get_current_user),
+        offset: int = Query(0),
+        fecha_inicio: Optional[datetime] = Query(None),
+        fecha_fin: Optional[datetime] = Query(None),
+    ):
+        return await rep_events.list_events_by_type(
+            user_id=current_user.id,
+            tipo=tipo,
+            offset=offset,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin
+        )
+    
+    @router.get("/by-type-count", response_model=int)
+    async def count_events_by_type(
+        tipo: EventType,
+        current_user: UserCokie = Depends(auth_router.get_current_user),
+        fecha_inicio: Optional[datetime] = Query(None),
+        fecha_fin: Optional[datetime] = Query(None),
+    ):
+        return await rep_events.list_events_by_type_len(
+            user_id=current_user.id,
+            tipo=tipo,
             fecha_inicio=fecha_inicio,
             fecha_fin=fecha_fin
         )

@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, time
 from typing import Optional
 from domain.events import ( EventOut, EventType, EventFullOut,
                             RifaCreate, RifaUpdate, RifaOut, 
@@ -14,6 +14,12 @@ def parse_metadata(value):
         return json.loads(value)
     return value
 
+def normalize_fecha_inicio(fecha: datetime) -> datetime:
+    return datetime.combine(fecha.date(), time.min)
+
+def normalize_fecha_fin(fecha: datetime) -> datetime:
+    return datetime.combine(fecha.date(), time.max)
+
 class RepEvents:
     LIMIT = 15
 
@@ -24,69 +30,56 @@ class RepEvents:
         fecha_inicio: Optional[datetime] = None,
         fecha_fin: Optional[datetime] = None,
     ) -> list[EventOut]:
-        """
-        Lista los eventos de un usuario con paginado por offset y filtros opcionales por fecha.
-        """
         try:
             async with (await PostgresDB.acquire()) as conn:
 
-                # 1️⃣ Obtener usuario activo
-                user = await conn.fetchrow(
-                    """
+                user = await conn.fetchrow("""
                     SELECT id
                     FROM "User"
                     WHERE username = $1 AND estado = TRUE;
-                    """,
-                    nombre_usuario,
-                )
+                """, nombre_usuario)
 
                 if not user:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="Usuario no encontrado o inactivo",
-                    )
+                    raise HTTPException(status_code=404, detail="Usuario no encontrado o inactivo")
 
                 user_id = user["id"]
 
-                # 2️⃣ Construir filtros dinámicos
                 filters = []
-                params = [user_id]  # $1 = user_id
+                params = [user_id]
                 param_idx = 2
 
                 if fecha_inicio:
+                    fecha_inicio = normalize_fecha_inicio(fecha_inicio)
                     filters.append(f"e.created_at >= ${param_idx}")
                     params.append(fecha_inicio)
                     param_idx += 1
 
                 if fecha_fin:
+                    fecha_fin = normalize_fecha_fin(fecha_fin)
                     filters.append(f"e.created_at <= ${param_idx}")
                     params.append(fecha_fin)
                     param_idx += 1
 
                 where_clause = f"AND {' AND '.join(filters)}" if filters else ""
 
-                # 3️⃣ Traer eventos con limit y offset
                 query = f"""
                     SELECT e.id, e.nombre, e.tipo, e.estado, e.usuario_id,
-                           e.fecha_inicio, e.fecha_fin, e.metadata,
-                           e.created_at, e.updated_at
+                        e.fecha_inicio, e.fecha_fin, e.metadata,
+                        e.created_at, e.updated_at
                     FROM Event e
                     WHERE e.usuario_id = $1
                     {where_clause}
                     ORDER BY e.created_at DESC
                     LIMIT {self.LIMIT} OFFSET {offset};
                 """
+
                 rows = await conn.fetch(query, *params)
 
                 return [
-                    EventOut.model_validate(
-                        {
-                            **dict(r),
-                            "metadata": json.loads(r["metadata"])
-                            if isinstance(r["metadata"], str)
-                            else r["metadata"],
-                        }
-                    )
+                    EventOut.model_validate({
+                        **dict(r),
+                        "metadata": json.loads(r["metadata"]) if isinstance(r["metadata"], str) else r["metadata"],
+                    })
                     for r in rows
                 ]
 
@@ -101,54 +94,45 @@ class RepEvents:
         fecha_inicio: Optional[datetime] = None,
         fecha_fin: Optional[datetime] = None,
     ) -> int:
-        """
-        Devuelve la cantidad total de eventos de un usuario que cumplen el filtro de fechas.
-        """
         try:
             async with (await PostgresDB.acquire()) as conn:
 
-                # 1️⃣ Obtener usuario activo
-                user = await conn.fetchrow(
-                    """
+                user = await conn.fetchrow("""
                     SELECT id
                     FROM "User"
                     WHERE username = $1 AND estado = TRUE;
-                    """,
-                    nombre_usuario,
-                )
+                """, nombre_usuario)
 
                 if not user:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="Usuario no encontrado o inactivo",
-                    )
+                    raise HTTPException(status_code=404, detail="Usuario no encontrado o inactivo")
 
                 user_id = user["id"]
 
-                # 2️⃣ Construir filtros dinámicos
                 filters = []
-                params = [user_id]  # $1 = user_id
+                params = [user_id]
                 param_idx = 2
 
                 if fecha_inicio:
+                    fecha_inicio = normalize_fecha_inicio(fecha_inicio)
                     filters.append(f"e.created_at >= ${param_idx}")
                     params.append(fecha_inicio)
                     param_idx += 1
 
                 if fecha_fin:
+                    fecha_fin = normalize_fecha_fin(fecha_fin)
                     filters.append(f"e.created_at <= ${param_idx}")
                     params.append(fecha_fin)
                     param_idx += 1
 
                 where_clause = f"AND {' AND '.join(filters)}" if filters else ""
 
-                # 3️⃣ Contar eventos
                 query = f"""
                     SELECT COUNT(*) as total
                     FROM Event e
                     WHERE e.usuario_id = $1
                     {where_clause};
                 """
+
                 row = await conn.fetchrow(query, *params)
                 return row["total"]
 
@@ -570,7 +554,7 @@ class RepEvents:
 
     async def list_events_by_type_len(
         self,
-        user_id:int,
+        user_id: int,
         tipo: EventType,
         fecha_inicio: Optional[datetime] = None,
         fecha_fin: Optional[datetime] = None,
@@ -583,11 +567,13 @@ class RepEvents:
                 param_idx = 3
 
                 if fecha_inicio:
+                    fecha_inicio = normalize_fecha_inicio(fecha_inicio)
                     filters.append(f"e.created_at >= ${param_idx}")
                     params.append(fecha_inicio)
                     param_idx += 1
 
                 if fecha_fin:
+                    fecha_fin = normalize_fecha_fin(fecha_fin)
                     filters.append(f"e.created_at <= ${param_idx}")
                     params.append(fecha_fin)
                     param_idx += 1
@@ -624,11 +610,13 @@ class RepEvents:
                 param_idx = 3
 
                 if fecha_inicio:
+                    fecha_inicio = normalize_fecha_inicio(fecha_inicio)
                     filters.append(f"e.created_at >= ${param_idx}")
                     params.append(fecha_inicio)
                     param_idx += 1
 
                 if fecha_fin:
+                    fecha_fin = normalize_fecha_fin(fecha_fin)
                     filters.append(f"e.created_at <= ${param_idx}")
                     params.append(fecha_fin)
                     param_idx += 1
@@ -644,54 +632,26 @@ class RepEvents:
                 """
 
                 rows = await conn.fetch(query, *params)
-
                 results: list[EventFullOut] = []
 
                 for r in rows:
-                    base = {
-                        **dict(r),
-                        "metadata": parse_metadata(r["metadata"]),
-                    }
+                    base = {**dict(r), "metadata": parse_metadata(r["metadata"])}
 
                     if tipo == EventType.rifa:
-                        rifa = await conn.fetchrow(
-                            "SELECT * FROM Rifa WHERE event_id = $1",
-                            r["id"]
-                        )
-                        results.append(
-                            RifaOut.model_validate({
-                                **base,
-                                **dict(rifa)
-                            })
-                        )
+                        rifa = await conn.fetchrow("SELECT * FROM Rifa WHERE event_id = $1", r["id"])
+                        results.append(RifaOut.model_validate({**base, **dict(rifa)}))
 
                     elif tipo == EventType.subasta:
-                        items = await conn.fetch(
-                            "SELECT nombre, precio_maximo FROM SubastaItem WHERE subasta_id = $1",
-                            r["id"]
-                        )
-                        results.append(
-                            SubastaOut.model_validate({
-                                **base,
-                                "items": [dict(i) for i in items]
-                            })
-                        )
+                        items = await conn.fetch("SELECT nombre, precio_maximo FROM SubastaItem WHERE subasta_id = $1", r["id"])
+                        results.append(SubastaOut.model_validate({**base, "items": [dict(i) for i in items]}))
 
                     elif tipo == EventType.venta_limitada:
-                        items = await conn.fetch(
-                            """
+                        items = await conn.fetch("""
                             SELECT nombre, precio, n_cantidad_maxima
                             FROM VentaLimitadaItem
                             WHERE venta_limitada_id = $1
-                            """,
-                            r["id"]
-                        )
-                        results.append(
-                            VentaLimitadaOut.model_validate({
-                                **base,
-                                "items": [dict(i) for i in items]
-                            })
-                        )
+                        """, r["id"])
+                        results.append(VentaLimitadaOut.model_validate({**base, "items": [dict(i) for i in items]}))
 
                 return results
 

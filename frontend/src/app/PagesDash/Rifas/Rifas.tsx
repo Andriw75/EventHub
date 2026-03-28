@@ -3,6 +3,7 @@ import ModCURifa from "./ModCURifa";
 import { fetchEventsType } from "../../../infrastructure/personEvents";
 import styles from "./Rifas.module.css";
 import { getTodayRange, getWeekRange, getMonthRange } from "../../utils";
+import type { RifaOut } from "../../../domain/personEvents";
 
 type RangeType = "hoy" | "semana" | "mes" | "personalizado";
 
@@ -13,6 +14,7 @@ export default function Rifas() {
   const [fechaInicio, setFechaInicio] = createSignal<string | null>(null);
   const [fechaFin, setFechaFin] = createSignal<string | null>(null);
   const [loading, setLoading] = createSignal(false);
+  const [rifas, setRifas] = createSignal<RifaOut[]>([]);
 
   function handleRangeChange(value: RangeType) {
     setRange(value);
@@ -27,24 +29,32 @@ export default function Rifas() {
     let inicio = fechaInicio();
     let fin = fechaFin();
 
-    if (range() === "hoy") {
-      ({ inicio, fin } = getTodayRange());
-    }
-
-    if (range() === "semana") {
-      ({ inicio, fin } = getWeekRange());
-    }
-
-    if (range() === "mes") {
-      ({ inicio, fin } = getMonthRange());
-    }
+    if (range() === "hoy") ({ inicio, fin } = getTodayRange());
+    if (range() === "semana") ({ inicio, fin } = getWeekRange());
+    if (range() === "mes") ({ inicio, fin } = getMonthRange());
 
     setLoading(true);
 
-    const data_rifa = await fetchEventsType("rifa", 0, inicio, fin);
-    console.log(data_rifa);
+    try {
+      const response = await fetchEventsType("rifa", 0, inicio, fin);
 
-    setLoading(false);
+      if (response.error) {
+        console.error("Error fetching rifas:", response.error);
+        setRifas([]);
+        // TODO: validar si el status es 401 para realizar un logout de pagina
+      } else {
+        const rifasSolo = response.data.filter(
+          (e): e is RifaOut => e.tipo === "rifa",
+        );
+
+        setRifas(rifasSolo);
+      }
+    } catch (err) {
+      console.error(err);
+      setRifas([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -94,6 +104,50 @@ export default function Rifas() {
             {loading() ? "Buscando..." : "Buscar"}
           </button>
         </div>
+      </div>
+
+      <div class={styles.grid}>
+        {rifas().map((rifa) => {
+          const total = rifa.numero_fin - rifa.numero_inicio + 1;
+          const ocupados = rifa.numeros_reservados.length;
+
+          return (
+            <div class={styles.card}>
+              <div class={styles.cardHeader}>
+                <h3>{rifa.nombre}</h3>
+                <div class={styles.actions}>
+                  <button onClick={() => console.log("editar", rifa)}>
+                    ✏️
+                  </button>
+                  <button onClick={() => console.log("eliminar", rifa)}>
+                    🗑️
+                  </button>
+                </div>
+              </div>
+
+              <p>
+                <strong>Estado:</strong> {rifa.estado}
+              </p>
+
+              <p>
+                <strong>Inicio:</strong> {rifa.fecha_inicio ?? "-"}
+              </p>
+              <p>
+                <strong>Fin:</strong> {rifa.fecha_fin ?? "-"}
+              </p>
+
+              <p class={styles.createdAt}>Creado: {rifa.created_at ?? "-"}</p>
+
+              <p>
+                <strong>Rango:</strong> {rifa.numero_inicio} - {rifa.numero_fin}
+              </p>
+
+              <p>
+                <strong>Ocupados:</strong> {ocupados} / {total}
+              </p>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

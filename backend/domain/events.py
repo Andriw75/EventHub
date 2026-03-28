@@ -25,7 +25,7 @@ class EventOut(BaseModel):
     fecha_inicio: Optional[datetime] = None
     fecha_fin: Optional[datetime] = None
     metadata: Optional[Dict[str, Any]] = {}
-    # created_at: datetime
+    created_at: datetime
 
     model_config = {
         "from_attributes": True

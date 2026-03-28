@@ -1,11 +1,10 @@
-import { createEffect, createSignal } from "solid-js";
+import { createEffect, createMemo, createSignal } from "solid-js";
 import ModalCommon from "../../common/UI/ModalCommon";
 import type {
   RifaCreate,
   RifaOut,
   RifaUpdate,
 } from "../../../domain/personEvents";
-import { createRifa, updateRifa } from "../../../infrastructure/personEvents";
 import styles from "./ModCURifa.module.css";
 import KVList from "../../common/components/KVList";
 
@@ -19,6 +18,10 @@ function toDateInputValue(date?: string | null) {
   return date ? date.slice(0, 10) : "";
 }
 
+function isSameJson(a: unknown, b: unknown) {
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+}
+
 export default function ModCURifa(props: ModCURifaProps) {
   const [nombre, setNombre] = createSignal("");
   const [fechaInicio, setFechaInicio] = createSignal("");
@@ -28,6 +31,9 @@ export default function ModCURifa(props: ModCURifaProps) {
   const [error, setError] = createSignal("");
   const [metadata, setMetadata] = createSignal<Record<string, any>>({});
   const [loading, setLoading] = createSignal(false);
+  const [previewOriginal, setPreviewOriginal] = createSignal(false);
+
+  const isEditing = createMemo(() => !!props.initialData?.id);
 
   createEffect(() => {
     const rifa = props.initialData;
@@ -39,6 +45,8 @@ export default function ModCURifa(props: ModCURifaProps) {
       setNumeroInicio(String(rifa.numero_inicio ?? 1));
       setNumeroFin(String(rifa.numero_fin ?? 100));
       setMetadata(rifa.metadata ?? {});
+      setError("");
+      setPreviewOriginal(false);
       return;
     }
 
@@ -49,7 +57,71 @@ export default function ModCURifa(props: ModCURifaProps) {
     setNumeroFin("100");
     setMetadata({});
     setError("");
+    setPreviewOriginal(false);
   });
+
+  const originalScalarValues = createMemo(() => ({
+    nombre: props.initialData?.nombre ?? "",
+    fechaInicio: toDateInputValue(props.initialData?.fecha_inicio),
+    fechaFin: toDateInputValue(props.initialData?.fecha_fin),
+    numeroInicio: String(props.initialData?.numero_inicio ?? 1),
+    numeroFin: String(props.initialData?.numero_fin ?? 100),
+  }));
+
+  const currentScalarValues = createMemo(() => ({
+    nombre: nombre(),
+    fechaInicio: fechaInicio(),
+    fechaFin: fechaFin(),
+    numeroInicio: numeroInicio(),
+    numeroFin: numeroFin(),
+  }));
+
+  const displayScalar = (
+    field: keyof ReturnType<typeof currentScalarValues>,
+  ) =>
+    previewOriginal() && isEditing()
+      ? originalScalarValues()[field]
+      : currentScalarValues()[field];
+
+  const displayMetadata = createMemo(() =>
+    previewOriginal() && isEditing()
+      ? (props.initialData?.metadata ?? {})
+      : metadata(),
+  );
+
+  const changed = (field: keyof ReturnType<typeof currentScalarValues>) => {
+    if (!isEditing()) return false;
+    return currentScalarValues()[field] !== originalScalarValues()[field];
+  };
+
+  const metadataChanged = createMemo(() => {
+    if (!isEditing()) return false;
+    return !isSameJson(metadata(), props.initialData?.metadata ?? {});
+  });
+
+  const hasChanges = createMemo(() => {
+    if (!isEditing()) return true;
+
+    return (
+      changed("nombre") ||
+      changed("fechaInicio") ||
+      changed("fechaFin") ||
+      changed("numeroInicio") ||
+      changed("numeroFin") ||
+      metadataChanged()
+    );
+  });
+
+  const restoreOriginals = () => {
+    if (!props.initialData) return;
+
+    setNombre(props.initialData.nombre ?? "");
+    setFechaInicio(toDateInputValue(props.initialData.fecha_inicio));
+    setFechaFin(toDateInputValue(props.initialData.fecha_fin));
+    setNumeroInicio(String(props.initialData.numero_inicio ?? 1));
+    setNumeroFin(String(props.initialData.numero_fin ?? 100));
+    setMetadata(props.initialData.metadata ?? {});
+  };
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
@@ -91,18 +163,12 @@ export default function ModCURifa(props: ModCURifaProps) {
 
       if (props.initialData?.id) {
         const payload: RifaUpdate = basePayload;
-        console.log("actualizando rifa");
-        console.log(props.initialData.id, payload);
-        // const response = await updateRifa(props.initialData.id, payload);
-        // console.log("Rifa actualizada:", response);
-        // console.log("redirigir o refrescar lista aquí");
+        console.log("actualizando rifa", props.initialData.id, payload);
+        // await updateRifa(props.initialData.id, payload);
       } else {
         const payload: RifaCreate = basePayload;
-        console.log("creando rifa");
-        console.log(payload);
-        // const response = await createRifa(payload);
-        // console.log("Rifa creada:", response);
-        // console.log("redirigir o refrescar lista aquí");
+        console.log("creando rifa", payload);
+        // await createRifa(payload);
       }
 
       props.onSaved?.();
@@ -118,60 +184,100 @@ export default function ModCURifa(props: ModCURifaProps) {
   return (
     <ModalCommon onClose={props.onClose} width="40%">
       <h1 class={styles.rifaTitle}>
-        {props.initialData?.id ? "Editando rifa" : "Creando rifa"}
+        {isEditing() ? "Editando rifa" : "Creando rifa"}
       </h1>
+
       <form class={styles.modalContent} onSubmit={handleSubmit}>
         <input
           class={styles.modalInput}
+          classList={{ [styles.campoModificado]: changed("nombre") }}
           type="text"
           placeholder="Nombre de la rifa"
-          value={nombre()}
+          value={displayScalar("nombre")}
           onInput={(e) => setNombre(e.currentTarget.value)}
         />
 
         <input
           class={styles.modalInput}
+          classList={{ [styles.campoModificado]: changed("fechaInicio") }}
           type="date"
-          value={fechaInicio()}
+          value={displayScalar("fechaInicio")}
           onInput={(e) => setFechaInicio(e.currentTarget.value)}
         />
 
         <input
           class={styles.modalInput}
+          classList={{ [styles.campoModificado]: changed("fechaFin") }}
           type="date"
-          value={fechaFin()}
+          value={displayScalar("fechaFin")}
           onInput={(e) => setFechaFin(e.currentTarget.value)}
         />
 
         <input
           class={styles.modalInput}
+          classList={{ [styles.campoModificado]: changed("numeroInicio") }}
           type="number"
           placeholder="Número inicio"
-          value={numeroInicio()}
+          value={displayScalar("numeroInicio")}
           onInput={(e) => setNumeroInicio(e.currentTarget.value)}
         />
 
         <input
           class={styles.modalInput}
+          classList={{ [styles.campoModificado]: changed("numeroFin") }}
           type="number"
           placeholder="Número fin"
-          value={numeroFin()}
+          value={displayScalar("numeroFin")}
           onInput={(e) => setNumeroFin(e.currentTarget.value)}
         />
 
-        <KVList data={metadata()} onChange={setMetadata} />
+        <KVList data={displayMetadata()} onChange={setMetadata} />
 
         {error() && <span class={styles.errorMessage}>{error()}</span>}
 
-        <button class={styles.modalButton} type="submit" disabled={loading()}>
-          {loading()
-            ? props.initialData
-              ? "Actualizando..."
-              : "Creando..."
-            : props.initialData
-              ? "Actualizar Rifa"
-              : "Crear Rifa"}
-        </button>
+        <div class={styles.actions}>
+          <div class={styles.leftAction}>
+            <button
+              type="button"
+              class={`${styles.modalButton} ${styles.cancelButton}`}
+              onClick={props.onClose}
+              disabled={loading()}
+            >
+              Cancelar
+            </button>
+          </div>
+
+          <div class={styles.middleAction}>
+            {isEditing() && (
+              <button
+                type="button"
+                class={`${styles.modalButton} ${styles.previewButton}`}
+                disabled={!hasChanges() || loading()}
+                onMouseEnter={() => hasChanges() && setPreviewOriginal(true)}
+                onMouseLeave={() => setPreviewOriginal(false)}
+                onClick={restoreOriginals}
+              >
+                Ver Originales
+              </button>
+            )}
+          </div>
+
+          <div class={styles.rightAction}>
+            <button
+              class={`${styles.modalButton} ${styles.saveButton}`}
+              type="submit"
+              disabled={loading()}
+            >
+              {loading()
+                ? isEditing()
+                  ? "Actualizando..."
+                  : "Creando..."
+                : isEditing()
+                  ? "Actualizar Rifa"
+                  : "Crear Rifa"}
+            </button>
+          </div>
+        </div>
       </form>
     </ModalCommon>
   );

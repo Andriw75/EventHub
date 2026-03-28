@@ -9,7 +9,6 @@ interface KVListProps {
 export default function KVList(props: KVListProps) {
   const [items, setItems] = createSignal<{ key: string; value: any }[]>([]);
 
-  // Inicializa items cuando props.data cambia
   createEffect(() => {
     if (props.data) {
       setItems(
@@ -33,10 +32,9 @@ export default function KVList(props: KVListProps) {
     props.onChange?.(Object.fromEntries(newItems.map((i) => [i.key, i.value])));
   };
 
-  // Drag & Drop
   const onDragStart = (e: DragEvent, index: number) => {
     e.dataTransfer?.setData("text/plain", index.toString());
-    e.dataTransfer?.setDragImage(new Image(), 0, 0); // evitar ghost image
+    e.dataTransfer?.setDragImage(new Image(), 0, 0);
   };
 
   const onDrop = (e: DragEvent, index: number) => {
@@ -67,7 +65,7 @@ export default function KVList(props: KVListProps) {
               class={styles.kvInput}
               placeholder="Key"
               value={item.key}
-              onInput={(e) =>
+              onChange={(e) =>
                 updateItem(index(), e.currentTarget.value, item.value)
               }
             />
@@ -75,7 +73,7 @@ export default function KVList(props: KVListProps) {
               class={styles.kvInput}
               placeholder="Value"
               value={item.value}
-              onInput={(e) =>
+              onChange={(e) =>
                 updateItem(index(), item.key, e.currentTarget.value)
               }
             />

@@ -1,5 +1,7 @@
 import { handleResponse, buildQuery, toIso } from "./utils";
 import type {
+  EventFullOut,
+  EventType,
   PersonEvents,
   RifaCreate,
   RifaUpdate,
@@ -110,4 +112,34 @@ export function deleteEvent(eventId: number) {
   return handleResponse<{ detail: string }>(`${API_EVENTS}/${eventId}`, {
     method: "DELETE",
   });
+}
+
+export function fetchEventsType(
+  tipo: EventType,
+  offset = 0,
+  fecha_inicio?: string | null,
+  fecha_fin?: string | null,
+) {
+  const query = buildQuery({
+    tipo,
+    offset,
+    fecha_inicio: toIso(fecha_inicio),
+    fecha_fin: toIso(fecha_fin),
+  });
+
+  return handleResponse<EventFullOut[]>(`${API_EVENTS}/by-type?${query}`);
+}
+
+export function fetchEventsTypeCount(
+  tipo: EventType,
+  fecha_inicio?: string | null,
+  fecha_fin?: string | null,
+) {
+  const query = buildQuery({
+    tipo,
+    fecha_inicio: toIso(fecha_inicio),
+    fecha_fin: toIso(fecha_fin),
+  });
+
+  return handleResponse<number>(`${API_EVENTS}/by-type-count?${query}`);
 }

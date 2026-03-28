@@ -97,3 +97,41 @@ export interface VentaLimitadaUpdate {
   metadata?: Record<string, any> | null;
   estado?: EventState | null;
 }
+
+export interface BaseEvent {
+  id: number;
+  usuario_id: number;
+  nombre: string;
+  tipo: EventType;
+  estado: EventState;
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
+  metadata: Record<string, any> | null;
+  created_at?: string;
+}
+export interface RifaOut extends BaseEvent {
+  tipo: "rifa";
+  numero_inicio: number;
+  numero_fin: number;
+  numeros_reservados: number[];
+}
+export interface SubastaItemOut {
+  nombre: string;
+  precio_maximo: number;
+}
+
+export interface SubastaOut extends BaseEvent {
+  tipo: "subasta";
+  items: SubastaItemOut[];
+}
+export interface VentaLimitadaItemOut {
+  nombre: string;
+  precio: number;
+  n_cantidad_maxima: number;
+}
+
+export interface VentaLimitadaOut extends BaseEvent {
+  tipo: "venta_limitada";
+  items: VentaLimitadaItemOut[];
+}
+export type EventFullOut = RifaOut | SubastaOut | VentaLimitadaOut;

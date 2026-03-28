@@ -14,6 +14,7 @@ import {
 import type { RifaOut } from "../../../domain/personEvents";
 import { confirm } from "../../common/UI/Confirm/confirmStore";
 import { addToast } from "../../common/UI/Toast/toastStore";
+import LoadingLoop from "../../common/IconSVG/LoadingLoop";
 
 type RangeType = "hoy" | "semana" | "mes" | "personalizado";
 
@@ -120,104 +121,107 @@ export default function Rifas() {
             </button>
           </div>
         </div>
+        {loading() ? (
+          <LoadingLoop width="100%" height="50rem" />
+        ) : (
+          <div class={styles.grid}>
+            {rifas().map((rifa) => {
+              const total = rifa.numero_fin - rifa.numero_inicio + 1;
+              const ocupados = rifa.numeros_reservados.length;
 
-        <div class={styles.grid}>
-          {rifas().map((rifa) => {
-            const total = rifa.numero_fin - rifa.numero_inicio + 1;
-            const ocupados = rifa.numeros_reservados.length;
+              return (
+                <div class={styles.card}>
+                  <div class={styles.cardHeader}>
+                    <h3>{rifa.nombre}</h3>
+                    <div class={styles.actions}>
+                      <button
+                        onClick={() => {
+                          setSelectedRifa(rifa);
+                          setShowModal(true);
+                        }}
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const result = await confirm(
+                            "Eliminar",
+                            `Seguro de eliminar la rifa ${rifa.nombre}`,
+                            async () => await deleteEvent(rifa.id),
+                          );
+                          if (result === null) return;
 
-            return (
-              <div class={styles.card}>
-                <div class={styles.cardHeader}>
-                  <h3>{rifa.nombre}</h3>
-                  <div class={styles.actions}>
-                    <button
-                      onClick={() => {
-                        setSelectedRifa(rifa);
-                        setShowModal(true);
-                      }}
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={async () => {
-                        const result = await confirm(
-                          "Eliminar",
-                          `Seguro de eliminar la rifa ${rifa.nombre}`,
-                          async () => await deleteEvent(rifa.id),
-                        );
-                        if (result === null) return;
-
-                        if (result?.error) {
-                          addToast({
-                            message: `Error al eliminar: ${result.error.detail}`,
-                            type: "error",
-                          });
-                        } else if (result?.data) {
-                          addToast({
-                            message: "Rifa eliminada",
-                            type: "success",
-                          });
-                          handleSearch();
-                        }
-                      }}
-                    >
-                      🗑️
-                    </button>
+                          if (result?.error) {
+                            addToast({
+                              message: `Error al eliminar: ${result.error.detail}`,
+                              type: "error",
+                            });
+                          } else if (result?.data) {
+                            addToast({
+                              message: "Rifa eliminada",
+                              type: "success",
+                            });
+                            handleSearch();
+                          }
+                        }}
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
+
+                  <p>
+                    <strong>Estado:</strong> {rifa.estado}
+                  </p>
+
+                  <p>
+                    <strong>Inicio:</strong> {formatDateTime(rifa.fecha_inicio)}
+                  </p>
+                  <p>
+                    <strong>Fin:</strong> {formatDateTime(rifa.fecha_fin)}
+                  </p>
+
+                  <p>
+                    <strong>Rango:</strong> {rifa.numero_inicio} -{" "}
+                    {rifa.numero_fin}
+                  </p>
+
+                  <p>
+                    <strong>Ocupados:</strong> {ocupados} / {total}
+                  </p>
+
+                  <p class={styles.createdAt}>
+                    Creado: {formatDateTime(rifa.created_at)}
+                  </p>
+
+                  {rifa.metadata && (
+                    <details class={styles.metadata}>
+                      <summary>Ver Metadata</summary>
+                      <table class={styles.metadataTable}>
+                        <tbody>
+                          <For each={Object.entries(rifa.metadata)}>
+                            {([key, value]) => (
+                              <tr>
+                                <td class={styles.metadataKey}>{key}</td>
+                                <td class={styles.metadataValue}>
+                                  {typeof value === "object" ? (
+                                    <pre>{JSON.stringify(value, null, 2)}</pre>
+                                  ) : (
+                                    value.toString()
+                                  )}
+                                </td>
+                              </tr>
+                            )}
+                          </For>
+                        </tbody>
+                      </table>
+                    </details>
+                  )}
                 </div>
-
-                <p>
-                  <strong>Estado:</strong> {rifa.estado}
-                </p>
-
-                <p>
-                  <strong>Inicio:</strong> {formatDateTime(rifa.fecha_inicio)}
-                </p>
-                <p>
-                  <strong>Fin:</strong> {formatDateTime(rifa.fecha_fin)}
-                </p>
-
-                <p>
-                  <strong>Rango:</strong> {rifa.numero_inicio} -{" "}
-                  {rifa.numero_fin}
-                </p>
-
-                <p>
-                  <strong>Ocupados:</strong> {ocupados} / {total}
-                </p>
-
-                <p class={styles.createdAt}>
-                  Creado: {formatDateTime(rifa.created_at)}
-                </p>
-
-                {rifa.metadata && (
-                  <details class={styles.metadata}>
-                    <summary>Ver Metadata</summary>
-                    <table class={styles.metadataTable}>
-                      <tbody>
-                        <For each={Object.entries(rifa.metadata)}>
-                          {([key, value]) => (
-                            <tr>
-                              <td class={styles.metadataKey}>{key}</td>
-                              <td class={styles.metadataValue}>
-                                {typeof value === "object" ? (
-                                  <pre>{JSON.stringify(value, null, 2)}</pre>
-                                ) : (
-                                  value.toString()
-                                )}
-                              </td>
-                            </tr>
-                          )}
-                        </For>
-                      </tbody>
-                    </table>
-                  </details>
-                )}
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {showModal() && (

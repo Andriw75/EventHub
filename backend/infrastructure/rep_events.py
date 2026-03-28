@@ -54,11 +54,12 @@ class RepEvents:
                 param_idx = 2
 
                 if fecha_inicio:
-                    filters.append(f"e.fecha_inicio >= ${param_idx}")
+                    filters.append(f"e.created_at >= ${param_idx}")
                     params.append(fecha_inicio)
                     param_idx += 1
+
                 if fecha_fin:
-                    filters.append(f"e.fecha_fin <= ${param_idx}")
+                    filters.append(f"e.created_at <= ${param_idx}")
                     params.append(fecha_fin)
                     param_idx += 1
 
@@ -72,7 +73,7 @@ class RepEvents:
                     FROM Event e
                     WHERE e.usuario_id = $1
                     {where_clause}
-                    ORDER BY e.fecha_inicio DESC
+                    ORDER BY e.created_at DESC
                     LIMIT {self.LIMIT} OFFSET {offset};
                 """
                 rows = await conn.fetch(query, *params)
@@ -130,11 +131,12 @@ class RepEvents:
                 param_idx = 2
 
                 if fecha_inicio:
-                    filters.append(f"e.fecha_inicio >= ${param_idx}")
+                    filters.append(f"e.created_at >= ${param_idx}")
                     params.append(fecha_inicio)
                     param_idx += 1
+
                 if fecha_fin:
-                    filters.append(f"e.fecha_fin <= ${param_idx}")
+                    filters.append(f"e.created_at <= ${param_idx}")
                     params.append(fecha_fin)
                     param_idx += 1
 
@@ -581,12 +583,12 @@ class RepEvents:
                 param_idx = 3
 
                 if fecha_inicio:
-                    filters.append(f"e.fecha_inicio >= ${param_idx}")
+                    filters.append(f"e.created_at >= ${param_idx}")
                     params.append(fecha_inicio)
                     param_idx += 1
 
                 if fecha_fin:
-                    filters.append(f"e.fecha_fin <= ${param_idx}")
+                    filters.append(f"e.created_at <= ${param_idx}")
                     params.append(fecha_fin)
                     param_idx += 1
 
@@ -622,12 +624,12 @@ class RepEvents:
                 param_idx = 3
 
                 if fecha_inicio:
-                    filters.append(f"e.fecha_inicio >= ${param_idx}")
+                    filters.append(f"e.created_at >= ${param_idx}")
                     params.append(fecha_inicio)
                     param_idx += 1
 
                 if fecha_fin:
-                    filters.append(f"e.fecha_fin <= ${param_idx}")
+                    filters.append(f"e.created_at <= ${param_idx}")
                     params.append(fecha_fin)
                     param_idx += 1
 
@@ -637,7 +639,7 @@ class RepEvents:
                     SELECT *
                     FROM Event e
                     WHERE e.usuario_id = $1 AND {where_clause}
-                    ORDER BY e.fecha_inicio DESC
+                    ORDER BY e.created_at DESC
                     LIMIT {self.LIMIT} OFFSET {offset};
                 """
 

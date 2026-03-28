@@ -30,6 +30,9 @@ CREATE TABLE Event (
     CONSTRAINT unique_nombre_por_usuario UNIQUE (nombre, usuario_id)
 );
 
+CREATE INDEX idx_event_user_created_at
+ON Event (usuario_id, created_at DESC);
+
 CREATE TABLE Rifa (
     id SERIAL PRIMARY KEY,
     event_id INT REFERENCES Event(id) ON DELETE CASCADE,

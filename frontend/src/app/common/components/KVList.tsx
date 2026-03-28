@@ -1,4 +1,4 @@
-import { createSignal, For } from "solid-js";
+import { createSignal, createEffect, For } from "solid-js";
 import styles from "./KVList.module.css";
 
 interface KVListProps {
@@ -7,11 +7,16 @@ interface KVListProps {
 }
 
 export default function KVList(props: KVListProps) {
-  const [items, setItems] = createSignal<{ key: string; value: any }[]>(
-    props.data
-      ? Object.entries(props.data).map(([key, value]) => ({ key, value }))
-      : [],
-  );
+  const [items, setItems] = createSignal<{ key: string; value: any }[]>([]);
+
+  // Inicializa items cuando props.data cambia
+  createEffect(() => {
+    if (props.data) {
+      setItems(
+        Object.entries(props.data).map(([key, value]) => ({ key, value })),
+      );
+    }
+  });
 
   const updateItem = (index: number, key: string, value: any) => {
     const newItems = [...items()];
@@ -28,11 +33,36 @@ export default function KVList(props: KVListProps) {
     props.onChange?.(Object.fromEntries(newItems.map((i) => [i.key, i.value])));
   };
 
+  // Drag & Drop
+  const onDragStart = (e: DragEvent, index: number) => {
+    e.dataTransfer?.setData("text/plain", index.toString());
+    e.dataTransfer?.setDragImage(new Image(), 0, 0); // evitar ghost image
+  };
+
+  const onDrop = (e: DragEvent, index: number) => {
+    e.preventDefault();
+    const draggedIndex = parseInt(e.dataTransfer?.getData("text/plain") || "0");
+    if (draggedIndex === index) return;
+    const newItems = [...items()];
+    const [moved] = newItems.splice(draggedIndex, 1);
+    newItems.splice(index, 0, moved);
+    setItems(newItems);
+    props.onChange?.(Object.fromEntries(newItems.map((i) => [i.key, i.value])));
+  };
+
+  const onDragOver = (e: DragEvent) => e.preventDefault();
+
   return (
     <div class={styles.kvContainer}>
       <For each={items()}>
         {(item, index) => (
-          <div class={styles.kvRow}>
+          <div
+            class={styles.kvRow}
+            draggable
+            onDragStart={(e) => onDragStart(e, index())}
+            onDragOver={onDragOver}
+            onDrop={(e) => onDrop(e, index())}
+          >
             <input
               class={styles.kvInput}
               placeholder="Key"

@@ -14,6 +14,7 @@ type RangeType = "hoy" | "semana" | "mes" | "personalizado";
 
 export default function Rifas() {
   const [showModal, setShowModal] = createSignal(false);
+  const [selectedRifa, setSelectedRifa] = createSignal<RifaOut | null>(null);
   const [range, setRange] = createSignal<RangeType>("semana");
   const [fechaInicio, setFechaInicio] = createSignal<string | null>(null);
   const [fechaFin, setFechaFin] = createSignal<string | null>(null);
@@ -60,10 +61,25 @@ export default function Rifas() {
 
   return (
     <div class={styles.container}>
-      {showModal() && <ModCURifa onClose={() => setShowModal(false)} />}
+      {showModal() && (
+        <ModCURifa
+          initialData={selectedRifa()}
+          onClose={() => {
+            setShowModal(false);
+            setSelectedRifa(null);
+          }}
+          onSaved={handleSearch}
+        />
+      )}
 
       <div class={styles.header}>
-        <button class={styles.openBtn} onClick={() => setShowModal(true)}>
+        <button
+          class={styles.openBtn}
+          onClick={() => {
+            setSelectedRifa(null);
+            setShowModal(true);
+          }}
+        >
           Crear
         </button>
 
@@ -117,7 +133,12 @@ export default function Rifas() {
               <div class={styles.cardHeader}>
                 <h3>{rifa.nombre}</h3>
                 <div class={styles.actions}>
-                  <button onClick={() => console.log("editar", rifa)}>
+                  <button
+                    onClick={() => {
+                      setSelectedRifa(rifa);
+                      setShowModal(true);
+                    }}
+                  >
                     ✏️
                   </button>
                   <button onClick={() => console.log("eliminar", rifa)}>
@@ -144,6 +165,7 @@ export default function Rifas() {
               <p>
                 <strong>Ocupados:</strong> {ocupados} / {total}
               </p>
+
               <p class={styles.createdAt}>
                 Creado: {formatDateTime(rifa.created_at)}
               </p>

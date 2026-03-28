@@ -1,12 +1,4 @@
-:root {
-  --color-primary-light: #63b3ed;
-  --color-primary: #1e90ff;
-  --color-primary-dark: #1565c0;
 
-  --color-success-light: #7be38c;
-  --color-success: #28a745;
-  --color-success-dark: #1c7430;
-}
 
 body {
   margin: 0;

@@ -6,6 +6,8 @@ import { onMount } from "solid-js";
 import { useAuth } from "../../context/auth";
 import { useNavigate } from "@solidjs/router";
 import Rifas from "../../PagesDash/Rifas/Rifas";
+import { ConfirmContainer } from "../../common/UI/Confirm/confirmStore";
+import ToastContainer from "../../common/UI/Toast/ToastContainer";
 
 const DashboardLayout = () => {
   const { user } = useAuth();
@@ -36,13 +38,17 @@ const DashboardLayout = () => {
   }
 
   return (
-    <div class={styles.wrapper}>
-      <div class={styles.sidebarWrap}>
-        <Sidebar />
-      </div>
+    <>
+      <ToastContainer />
+      <div class={styles.wrapper}>
+        <div class={styles.sidebarWrap}>
+          <Sidebar />
+        </div>
 
-      <main class={styles.mainContent}>{page}</main>
-    </div>
+        <main class={styles.mainContent}>{page}</main>
+      </div>
+      <ConfirmContainer />
+    </>
   );
 };
 

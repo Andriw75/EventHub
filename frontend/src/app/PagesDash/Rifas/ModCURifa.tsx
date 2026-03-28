@@ -7,6 +7,7 @@ import type {
 } from "../../../domain/personEvents";
 import styles from "./ModCURifa.module.css";
 import KVList from "../../common/components/KVList";
+import { createRifa, updateRifa } from "../../../infrastructure/personEvents";
 
 interface ModCURifaProps {
   onClose: () => void;
@@ -354,12 +355,12 @@ export default function ModCURifa(props: ModCURifaProps) {
           (payload as any).numeros_reservados = reservedClean;
         if (metadataChanged()) payload.metadata = metadata();
 
-        console.log("actualizando rifa", props.initialData.id, payload);
-        // await updateRifa(props.initialData.id, payload);
+        await updateRifa(props.initialData.id, payload);
+        
       } else {
         const payload: RifaCreate = basePayload as RifaCreate;
-        console.log("creando rifa", payload);
-        // await createRifa(payload);
+        await createRifa(payload);
+        
       }
 
       props.onSaved?.();

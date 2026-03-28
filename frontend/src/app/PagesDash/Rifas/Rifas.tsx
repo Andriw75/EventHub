@@ -1,4 +1,4 @@
-import { createSignal, For } from "solid-js";
+import { createSignal, For, onMount } from "solid-js";
 import ModCURifa from "./ModCURifa";
 import { fetchEventsType } from "../../../infrastructure/personEvents";
 import styles from "./Rifas.module.css";
@@ -58,6 +58,9 @@ export default function Rifas() {
       setLoading(false);
     }
   }
+  onMount(async () => {
+    await handleSearch()
+  });
 
   return (
     <div class={styles.container}>

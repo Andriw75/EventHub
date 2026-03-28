@@ -29,3 +29,11 @@
   color: red;
   font-size: 0.875rem;
 }
+
+.rifaTitle {
+  text-align: center;
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 2rem;
+  color: #1f2937;
+}

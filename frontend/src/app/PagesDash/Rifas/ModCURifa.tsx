@@ -91,13 +91,17 @@ export default function ModCURifa(props: ModCURifaProps) {
 
       if (props.initialData?.id) {
         const payload: RifaUpdate = basePayload;
-        const response = await updateRifa(props.initialData.id, payload);
-        console.log("Rifa actualizada:", response);
+        console.log("actualizando rifa");
+        console.log(props.initialData.id, payload);
+        // const response = await updateRifa(props.initialData.id, payload);
+        // console.log("Rifa actualizada:", response);
         // console.log("redirigir o refrescar lista aquí");
       } else {
         const payload: RifaCreate = basePayload;
-        const response = await createRifa(payload);
-        console.log("Rifa creada:", response);
+        console.log("creando rifa");
+        console.log(payload);
+        // const response = await createRifa(payload);
+        // console.log("Rifa creada:", response);
         // console.log("redirigir o refrescar lista aquí");
       }
 
@@ -113,6 +117,9 @@ export default function ModCURifa(props: ModCURifaProps) {
 
   return (
     <ModalCommon onClose={props.onClose} width="40%">
+      <h1 class={styles.rifaTitle}>
+        {props.initialData?.id ? "Editando rifa" : "Creando rifa"}
+      </h1>
       <form class={styles.modalContent} onSubmit={handleSubmit}>
         <input
           class={styles.modalInput}

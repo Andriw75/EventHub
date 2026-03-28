@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal } from "solid-js";
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import ModalCommon from "../../common/UI/ModalCommon";
 import type {
   RifaCreate,
@@ -22,12 +22,113 @@ function isSameJson(a: unknown, b: unknown) {
   return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 }
 
+function uniqueSortedNumbers(values: number[]) {
+  return Array.from(new Set(values)).sort((a, b) => a - b);
+}
+
+function sanitizeNumbers(values: number[], min: number, max: number) {
+  return uniqueSortedNumbers(values.filter((n) => n >= min && n <= max));
+}
+
+function arraysEqual(a: number[], b: number[]) {
+  if (a.length !== b.length) return false;
+  return a.every((value, index) => value === b[index]);
+}
+
+type NumberSelectorProps = {
+  min: number;
+  max: number;
+  selected: number[];
+  onToggle: (value: number) => void;
+  onSelectAll?: () => void;
+  onClear?: () => void;
+  disabled?: boolean;
+};
+
+function NumberCircleSelector(props: NumberSelectorProps) {
+  const numbers = createMemo(() => {
+    if (!Number.isFinite(props.min) || !Number.isFinite(props.max)) return [];
+    if (props.min > props.max) return [];
+    return Array.from(
+      { length: props.max - props.min + 1 },
+      (_, index) => props.min + index,
+    );
+  });
+
+  return (
+    <div class={styles.numbersSection}>
+      <div class={styles.numbersHeader}>
+        <div>
+          <h2 class={styles.sectionTitle}>Números reservados</h2>
+          <p class={styles.sectionSubtitle}>
+            Activa o desactiva números con un clic. Los que queden fuera del
+            rango se eliminan automáticamente.
+          </p>
+        </div>
+
+        <div class={styles.numbersActions}>
+          <button
+            type="button"
+            class={`${styles.smallButton} ${styles.secondaryButton}`}
+            onClick={props.onSelectAll}
+            disabled={props.disabled || numbers().length === 0}
+          >
+            Seleccionar todos
+          </button>
+          <button
+            type="button"
+            class={`${styles.smallButton} ${styles.secondaryButton}`}
+            onClick={props.onClear}
+            disabled={props.disabled || props.selected.length === 0}
+          >
+            Limpiar
+          </button>
+        </div>
+      </div>
+
+      <Show
+        when={numbers().length > 0}
+        fallback={
+          <div class={styles.emptyNumbersState}>
+            Define un rango válido para ver los números disponibles.
+          </div>
+        }
+      >
+        <div class={styles.numbersGrid}>
+          <For each={numbers()}>
+            {(number) => {
+              const active = () => props.selected.includes(number);
+
+              return (
+                <button
+                  type="button"
+                  classList={{
+                    [styles.numberCircle]: true,
+                    [styles.numberActive]: active(),
+                    [styles.numberInactive]: !active(),
+                  }}
+                  disabled={props.disabled}
+                  onClick={() => props.onToggle(number)}
+                  title={active() ? "Reservado" : "Disponible"}
+                >
+                  {number}
+                </button>
+              );
+            }}
+          </For>
+        </div>
+      </Show>
+    </div>
+  );
+}
+
 export default function ModCURifa(props: ModCURifaProps) {
   const [nombre, setNombre] = createSignal("");
   const [fechaInicio, setFechaInicio] = createSignal("");
   const [fechaFin, setFechaFin] = createSignal("");
   const [numeroInicio, setNumeroInicio] = createSignal("1");
   const [numeroFin, setNumeroFin] = createSignal("100");
+  const [numerosReservados, setNumerosReservados] = createSignal<number[]>([]);
   const [error, setError] = createSignal("");
   const [metadata, setMetadata] = createSignal<Record<string, any>>({});
   const [loading, setLoading] = createSignal(false);
@@ -44,6 +145,13 @@ export default function ModCURifa(props: ModCURifaProps) {
       setFechaFin(toDateInputValue(rifa.fecha_fin));
       setNumeroInicio(String(rifa.numero_inicio ?? 1));
       setNumeroFin(String(rifa.numero_fin ?? 100));
+      setNumerosReservados(
+        sanitizeNumbers(
+          (rifa as any).numeros_reservados ?? [],
+          Number(rifa.numero_inicio ?? 1),
+          Number(rifa.numero_fin ?? 100),
+        ),
+      );
       setMetadata(rifa.metadata ?? {});
       setError("");
       setPreviewOriginal(false);
@@ -55,9 +163,25 @@ export default function ModCURifa(props: ModCURifaProps) {
     setFechaFin("");
     setNumeroInicio("1");
     setNumeroFin("100");
+    setNumerosReservados([]);
     setMetadata({});
     setError("");
     setPreviewOriginal(false);
+  });
+
+  const currentMin = createMemo(() => Number(numeroInicio()));
+  const currentMax = createMemo(() => Number(numeroFin()));
+
+  createEffect(() => {
+    const min = currentMin();
+    const max = currentMax();
+
+    if (!Number.isFinite(min) || !Number.isFinite(max) || min > max) return;
+
+    const sanitized = sanitizeNumbers(numerosReservados(), min, max);
+    if (!arraysEqual(sanitized, numerosReservados())) {
+      setNumerosReservados(sanitized);
+    }
   });
 
   const originalScalarValues = createMemo(() => ({
@@ -67,6 +191,10 @@ export default function ModCURifa(props: ModCURifaProps) {
     numeroInicio: String(props.initialData?.numero_inicio ?? 1),
     numeroFin: String(props.initialData?.numero_fin ?? 100),
   }));
+
+  const originalReservedNumbers = createMemo(() =>
+    uniqueSortedNumbers((props.initialData as any)?.numeros_reservados ?? []),
+  );
 
   const currentScalarValues = createMemo(() => ({
     nombre: nombre(),
@@ -89,10 +217,21 @@ export default function ModCURifa(props: ModCURifaProps) {
       : metadata(),
   );
 
+  const displayReservedNumbers = createMemo(() =>
+    previewOriginal() && isEditing()
+      ? originalReservedNumbers()
+      : numerosReservados(),
+  );
+
   const changed = (field: keyof ReturnType<typeof currentScalarValues>) => {
     if (!isEditing()) return false;
     return currentScalarValues()[field] !== originalScalarValues()[field];
   };
+
+  const reservedChanged = createMemo(() => {
+    if (!isEditing()) return false;
+    return !arraysEqual(numerosReservados(), originalReservedNumbers());
+  });
 
   const metadataChanged = createMemo(() => {
     if (!isEditing()) return false;
@@ -108,7 +247,8 @@ export default function ModCURifa(props: ModCURifaProps) {
       changed("fechaFin") ||
       changed("numeroInicio") ||
       changed("numeroFin") ||
-      metadataChanged()
+      metadataChanged() ||
+      reservedChanged()
     );
   });
 
@@ -120,8 +260,41 @@ export default function ModCURifa(props: ModCURifaProps) {
     setFechaFin(toDateInputValue(props.initialData.fecha_fin));
     setNumeroInicio(String(props.initialData.numero_inicio ?? 1));
     setNumeroFin(String(props.initialData.numero_fin ?? 100));
+    setNumerosReservados(
+      uniqueSortedNumbers((props.initialData as any)?.numeros_reservados ?? []),
+    );
     setMetadata(props.initialData.metadata ?? {});
   };
+
+  const toggleReservado = (numero: number) => {
+    const min = currentMin();
+    const max = currentMax();
+
+    if (!Number.isFinite(min) || !Number.isFinite(max) || min > max) return;
+    if (numero < min || numero > max) return;
+
+    setNumerosReservados((prev) => {
+      if (prev.includes(numero)) {
+        return prev.filter((n) => n !== numero);
+      }
+      return uniqueSortedNumbers([...prev, numero]);
+    });
+  };
+
+  const selectAllInRange = () => {
+    const min = currentMin();
+    const max = currentMax();
+
+    if (!Number.isFinite(min) || !Number.isFinite(max) || min > max) return;
+
+    const all = Array.from(
+      { length: max - min + 1 },
+      (_, index) => min + index,
+    );
+    setNumerosReservados(all);
+  };
+
+  const clearAll = () => setNumerosReservados([]);
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
@@ -149,12 +322,19 @@ export default function ModCURifa(props: ModCURifaProps) {
       return;
     }
 
+    const reservedClean = sanitizeNumbers(
+      numerosReservados(),
+      numeroInicioValue,
+      numeroFinValue,
+    );
+
     const basePayload = {
       nombre: nombreValue,
       fecha_inicio: fechaInicio() || null,
       fecha_fin: fechaFin() || null,
       numero_inicio: numeroInicioValue,
       numero_fin: numeroFinValue,
+      numeros_reservados: reservedClean,
       metadata: metadata(),
     };
 
@@ -162,11 +342,22 @@ export default function ModCURifa(props: ModCURifaProps) {
       setLoading(true);
 
       if (props.initialData?.id) {
-        const payload: RifaUpdate = basePayload;
+        const payload: RifaUpdate = {};
+
+        if (changed("nombre")) payload.nombre = nombreValue;
+        if (changed("fechaInicio"))
+          payload.fecha_inicio = fechaInicio() || null;
+        if (changed("fechaFin")) payload.fecha_fin = fechaFin() || null;
+        if (changed("numeroInicio")) payload.numero_inicio = numeroInicioValue;
+        if (changed("numeroFin")) payload.numero_fin = numeroFinValue;
+        if (reservedChanged())
+          (payload as any).numeros_reservados = reservedClean;
+        if (metadataChanged()) payload.metadata = metadata();
+
         console.log("actualizando rifa", props.initialData.id, payload);
         // await updateRifa(props.initialData.id, payload);
       } else {
-        const payload: RifaCreate = basePayload;
+        const payload: RifaCreate = basePayload as RifaCreate;
         console.log("creando rifa", payload);
         // await createRifa(payload);
       }
@@ -182,58 +373,109 @@ export default function ModCURifa(props: ModCURifaProps) {
   };
 
   return (
-    <ModalCommon onClose={props.onClose} width="40%">
+    <ModalCommon onClose={props.onClose} width="56%">
       <h1 class={styles.rifaTitle}>
         {isEditing() ? "Editando rifa" : "Creando rifa"}
       </h1>
 
       <form class={styles.modalContent} onSubmit={handleSubmit}>
-        <input
-          class={styles.modalInput}
-          classList={{ [styles.campoModificado]: changed("nombre") }}
-          type="text"
-          placeholder="Nombre de la rifa"
-          value={displayScalar("nombre")}
-          onInput={(e) => setNombre(e.currentTarget.value)}
+        <div class={styles.field}>
+          <label class={styles.label} for="rifa-nombre">
+            Nombre
+          </label>
+          <input
+            id="rifa-nombre"
+            class={styles.modalInput}
+            classList={{ [styles.campoModificado]: changed("nombre") }}
+            type="text"
+            placeholder="Nombre de la rifa"
+            value={displayScalar("nombre")}
+            onInput={(e) => setNombre(e.currentTarget.value)}
+          />
+        </div>
+
+        <div class={styles.dateRow}>
+          <div class={styles.field}>
+            <label class={styles.label} for="rifa-fecha-inicio">
+              Fecha de inicio
+            </label>
+            <input
+              id="rifa-fecha-inicio"
+              class={styles.modalInput}
+              classList={{ [styles.campoModificado]: changed("fechaInicio") }}
+              type="date"
+              value={displayScalar("fechaInicio")}
+              onInput={(e) => setFechaInicio(e.currentTarget.value)}
+            />
+          </div>
+
+          <div class={styles.field}>
+            <label class={styles.label} for="rifa-fecha-fin">
+              Fecha de fin
+            </label>
+            <input
+              id="rifa-fecha-fin"
+              class={styles.modalInput}
+              classList={{ [styles.campoModificado]: changed("fechaFin") }}
+              type="date"
+              value={displayScalar("fechaFin")}
+              onInput={(e) => setFechaFin(e.currentTarget.value)}
+            />
+          </div>
+        </div>
+
+        <div class={styles.dateRow}>
+          <div class={styles.field}>
+            <label class={styles.label} for="rifa-numero-inicio">
+              Número inicio
+            </label>
+            <input
+              id="rifa-numero-inicio"
+              class={styles.modalInput}
+              classList={{ [styles.campoModificado]: changed("numeroInicio") }}
+              type="number"
+              min="1"
+              placeholder="Número inicio"
+              value={displayScalar("numeroInicio")}
+              onInput={(e) => setNumeroInicio(e.currentTarget.value)}
+            />
+          </div>
+
+          <div class={styles.field}>
+            <label class={styles.label} for="rifa-numero-fin">
+              Número fin
+            </label>
+            <input
+              id="rifa-numero-fin"
+              class={styles.modalInput}
+              classList={{ [styles.campoModificado]: changed("numeroFin") }}
+              type="number"
+              min="1"
+              placeholder="Número fin"
+              value={displayScalar("numeroFin")}
+              onInput={(e) => setNumeroFin(e.currentTarget.value)}
+            />
+          </div>
+        </div>
+
+        <NumberCircleSelector
+          min={currentMin()}
+          max={currentMax()}
+          selected={displayReservedNumbers()}
+          onToggle={toggleReservado}
+          onSelectAll={selectAllInRange}
+          onClear={clearAll}
+          disabled={loading()}
         />
 
-        <input
-          class={styles.modalInput}
-          classList={{ [styles.campoModificado]: changed("fechaInicio") }}
-          type="date"
-          value={displayScalar("fechaInicio")}
-          onInput={(e) => setFechaInicio(e.currentTarget.value)}
-        />
+        <div class={styles.field}>
+          <label class={styles.label}>Metadata</label>
+          <KVList data={displayMetadata()} onChange={setMetadata} />
+        </div>
 
-        <input
-          class={styles.modalInput}
-          classList={{ [styles.campoModificado]: changed("fechaFin") }}
-          type="date"
-          value={displayScalar("fechaFin")}
-          onInput={(e) => setFechaFin(e.currentTarget.value)}
-        />
-
-        <input
-          class={styles.modalInput}
-          classList={{ [styles.campoModificado]: changed("numeroInicio") }}
-          type="number"
-          placeholder="Número inicio"
-          value={displayScalar("numeroInicio")}
-          onInput={(e) => setNumeroInicio(e.currentTarget.value)}
-        />
-
-        <input
-          class={styles.modalInput}
-          classList={{ [styles.campoModificado]: changed("numeroFin") }}
-          type="number"
-          placeholder="Número fin"
-          value={displayScalar("numeroFin")}
-          onInput={(e) => setNumeroFin(e.currentTarget.value)}
-        />
-
-        <KVList data={displayMetadata()} onChange={setMetadata} />
-
-        {error() && <span class={styles.errorMessage}>{error()}</span>}
+        <Show when={error()}>
+          <span class={styles.errorMessage}>{error()}</span>
+        </Show>
 
         <div class={styles.actions}>
           <div class={styles.leftAction}>
@@ -257,7 +499,7 @@ export default function ModCURifa(props: ModCURifaProps) {
                 onMouseLeave={() => setPreviewOriginal(false)}
                 onClick={restoreOriginals}
               >
-                Ver Originales
+                Ver originales
               </button>
             )}
           </div>
@@ -273,8 +515,8 @@ export default function ModCURifa(props: ModCURifaProps) {
                   ? "Actualizando..."
                   : "Creando..."
                 : isEditing()
-                  ? "Actualizar Rifa"
-                  : "Crear Rifa"}
+                  ? "Actualizar rifa"
+                  : "Crear rifa"}
             </button>
           </div>
         </div>

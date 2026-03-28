@@ -60,8 +60,8 @@ from application.auth import AuthRouter
 instance_auth = AuthRouter(container)
 app.include_router(instance_auth.router)
 
-from application.eventsR import eventsR
-app.include_router(eventsR(container,instance_auth))
+from application.eventsRW import eventsRW
+app.include_router(eventsRW(container,instance_auth))
 
 if __name__ == '__main__':
     import uvicorn

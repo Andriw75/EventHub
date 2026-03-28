@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query, Depends
+from fastapi import APIRouter, Query, Depends, WebSocket
 from typing import Optional
 from datetime import datetime
 
@@ -9,13 +9,64 @@ from domain.events import (
 )
 from infrastructure.rep_events import RepEvents
 from service_container import ServiceContainer
+from application.mnj_ws import WebSocketManager
 from application.auth import AuthRouter
 from domain.auth import UserCokie
 
 
-def eventsR(container: ServiceContainer, auth_router: AuthRouter):
+def eventsRW(container: ServiceContainer, auth_router: AuthRouter):
     router = APIRouter(prefix="/events", tags=["events"])
     rep_events = container.resolve(RepEvents)
+
+    # CONEXION WS
+    ws_mng = WebSocketManager()
+
+    async def handle_event_subscription(connection_id: str, ws: WebSocket, data: dict):
+        event_id = data.get("event_id")
+
+        if not event_id:
+            await ws.send_json({
+                "event": "error",
+                "message": "event_id missing"
+            })
+            return
+
+        channel = f"event_{event_id}"
+
+        event_data = await rep_events.get_event_full_by_id(event_id)
+
+        if not event_data:
+            await ws.send_json({
+                "event": "error",
+                "message": "event not found"
+            })
+
+            await ws_mng.disconnect(connection_id)
+            return
+
+        await ws_mng.subscribe(connection_id, channel)
+        await ws.send_json({
+            "event": "event_data",
+            "data": event_data.model_dump(mode='json')
+        })
+
+    ws_mng.register_message_handler("suscribe_event",handle_event_subscription)
+
+    async def handle_event_unsubscription(connection_id: str, ws: WebSocket, data: dict):
+        event_id = data.get("event_id")
+
+        if not event_id:
+            await ws.send_json({
+                "event": "error",
+                "message": "event_id missing"
+            })
+            return
+
+        channel = f"event_{event_id}"
+
+        await ws_mng.unsubscribe(connection_id, channel)
+
+    ws_mng.register_message_handler("unsuscribe_event", handle_event_unsubscription)
 
     # -------------------------
     # 📌 LISTAR EVENTOS

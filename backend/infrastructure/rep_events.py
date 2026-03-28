@@ -660,3 +660,80 @@ class RepEvents:
         except Exception as e:
             raise HTTPException(500, str(e))
 
+    async def get_event_full_by_id(
+        self,
+        event_id: int,
+    ) -> EventFullOut:
+        try:
+            async with (await PostgresDB.acquire()) as conn:
+
+                event = await conn.fetchrow(
+                    """
+                    SELECT *
+                    FROM Event
+                    WHERE id = $1;
+                    """,
+                    event_id
+                )
+
+                if not event:
+                    return None
+
+                base = {
+                    **dict(event),
+                    "metadata": parse_metadata(event["metadata"])
+                }
+
+                tipo = event["tipo"]
+
+                if tipo == EventType.rifa.value:
+                    rifa = await conn.fetchrow(
+                        "SELECT * FROM Rifa WHERE event_id = $1",
+                        event_id
+                    )
+
+                    if not rifa:
+                        raise HTTPException(404, "Datos de rifa no encontrados")
+
+                    return RifaOut.model_validate({
+                        **base,
+                        **dict(rifa)
+                    })
+
+                elif tipo == EventType.subasta.value:
+                    items = await conn.fetch(
+                        """
+                        SELECT nombre, precio_maximo
+                        FROM SubastaItem
+                        WHERE subasta_id = $1
+                        """,
+                        event_id
+                    )
+
+                    return SubastaOut.model_validate({
+                        **base,
+                        "items": [dict(i) for i in items]
+                    })
+
+                elif tipo == EventType.venta_limitada.value:
+                    items = await conn.fetch(
+                        """
+                        SELECT nombre, precio, n_cantidad_maxima
+                        FROM VentaLimitadaItem
+                        WHERE venta_limitada_id = $1
+                        """,
+                        event_id
+                    )
+
+                    return VentaLimitadaOut.model_validate({
+                        **base,
+                        "items": [dict(i) for i in items]
+                    })
+
+                else:
+                    return None
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))

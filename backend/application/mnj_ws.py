@@ -186,7 +186,7 @@ class WebSocketManager:
         if not ws:
             return
         try:
-            await handler(ws, data)
+            await handler(connection_id, ws, data)
         except Exception as e:
             self._log("error", f"Error en handler {event}: {e}")
 

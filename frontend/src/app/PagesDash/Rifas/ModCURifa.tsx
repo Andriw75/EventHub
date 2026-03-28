@@ -9,6 +9,7 @@ import type {
 import styles from "./ModCURifa.module.css";
 import KVList from "../../common/components/KVList";
 import { createRifa, updateRifa } from "../../../infrastructure/personEvents";
+import { addToast } from "../../common/UI/Toast/toastStore";
 
 interface ModCURifaProps {
   onClose: () => void;
@@ -366,9 +367,17 @@ export default function ModCURifa(props: ModCURifaProps) {
         if (metadataChanged()) payload.metadata = metadata();
 
         await updateRifa(props.initialData.id, payload);
+        addToast({
+          message: "Rifa actualizada correctamente",
+          type: "success",
+        });
       } else {
         const payload: RifaCreate = basePayload as RifaCreate;
         await createRifa(payload);
+        addToast({
+          message: "Rifa creada correctamente",
+          type: "success",
+        });
       }
 
       props.onSaved?.();

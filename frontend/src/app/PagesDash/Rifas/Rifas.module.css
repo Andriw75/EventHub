@@ -1,0 +1,84 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: #f9fafb; /* gris muy claro */
+}
+
+/* fila principal: izquierda / derecha */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+/* botón abrir (neutral elegante) */
+.openBtn {
+  width: fit-content;
+  padding: 8px 16px;
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.openBtn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+/* filtros a la derecha */
+.filters {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* select */
+.select {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #111827;
+}
+
+/* inputs */
+.input {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #111827;
+}
+
+.input:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* botón buscar (ligero contraste, no fuerte) */
+.searchBtn {
+  padding: 8px 16px;
+  background: #374151; /* gris oscuro elegante */
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.searchBtn:hover {
+  background: #1f2933;
+}
+
+.searchBtn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}

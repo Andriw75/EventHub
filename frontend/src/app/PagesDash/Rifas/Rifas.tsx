@@ -2,14 +2,18 @@ import { createSignal } from "solid-js";
 import ModCURifa from "./ModCURifa";
 import { fetchEventsType } from "../../../infrastructure/personEvents";
 import styles from "./Rifas.module.css";
-import { getTodayRange, getWeekRange, getMonthRange } from "../../utils";
+import {
+  getTodayRange,
+  getWeekRange,
+  getMonthRange,
+  formatDateTime,
+} from "../../utils";
 import type { RifaOut } from "../../../domain/personEvents";
 
 type RangeType = "hoy" | "semana" | "mes" | "personalizado";
 
 export default function Rifas() {
   const [showModal, setShowModal] = createSignal(false);
-
   const [range, setRange] = createSignal<RangeType>("semana");
   const [fechaInicio, setFechaInicio] = createSignal<string | null>(null);
   const [fechaFin, setFechaFin] = createSignal<string | null>(null);
@@ -18,7 +22,6 @@ export default function Rifas() {
 
   function handleRangeChange(value: RangeType) {
     setRange(value);
-
     if (value !== "personalizado") {
       setFechaInicio(null);
       setFechaFin(null);
@@ -41,12 +44,10 @@ export default function Rifas() {
       if (response.error) {
         console.error("Error fetching rifas:", response.error);
         setRifas([]);
-        // TODO: validar si el status es 401 para realizar un logout de pagina
       } else {
         const rifasSolo = response.data.filter(
           (e): e is RifaOut => e.tipo === "rifa",
         );
-
         setRifas(rifasSolo);
       }
     } catch (err) {
@@ -130,13 +131,11 @@ export default function Rifas() {
               </p>
 
               <p>
-                <strong>Inicio:</strong> {rifa.fecha_inicio ?? "-"}
+                <strong>Inicio:</strong> {formatDateTime(rifa.fecha_inicio)}
               </p>
               <p>
-                <strong>Fin:</strong> {rifa.fecha_fin ?? "-"}
+                <strong>Fin:</strong> {formatDateTime(rifa.fecha_fin)}
               </p>
-
-              <p class={styles.createdAt}>Creado: {rifa.created_at ?? "-"}</p>
 
               <p>
                 <strong>Rango:</strong> {rifa.numero_inicio} - {rifa.numero_fin}
@@ -145,6 +144,16 @@ export default function Rifas() {
               <p>
                 <strong>Ocupados:</strong> {ocupados} / {total}
               </p>
+              <p class={styles.createdAt}>
+                Creado: {formatDateTime(rifa.created_at)}
+              </p>
+
+              {rifa.metadata && (
+                <details class={styles.metadata}>
+                  <summary>Ver Metadata</summary>
+                  <pre>{JSON.stringify(rifa.metadata, null, 2)}</pre>
+                </details>
+              )}
             </div>
           );
         })}

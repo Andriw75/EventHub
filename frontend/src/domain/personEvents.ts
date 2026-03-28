@@ -107,7 +107,7 @@ export interface BaseEvent {
   fecha_inicio: string | null;
   fecha_fin: string | null;
   metadata: Record<string, any> | null;
-  created_at?: string;
+  created_at: string | null;
 }
 export interface RifaOut extends BaseEvent {
   tipo: "rifa";

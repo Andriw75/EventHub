@@ -19,25 +19,29 @@
     border 0.2s;
   padding: 0.3rem;
   border-radius: 6px;
+  background-color: #f9f9f9;
+  border: 1px solid #d1d1d1;
 }
 
 .kvRow:active {
   cursor: grabbing;
-  background-color: #f0f0f0;
+  background-color: #e0e0e0;
 }
 
 .kvInput {
   padding: 0.5rem;
-  border: 1px solid #ccc;
+  border: 1px solid #b0b0b0;
   border-radius: 4px;
   flex: 1 1 150px;
   min-width: 120px;
   max-width: 100%;
   box-sizing: border-box;
+  background-color: #ffffff;
+  color: #333333;
 }
 
 .kvRemove {
-  background-color: #e53e3e;
+  background-color: #333333;
   color: white;
   border: none;
   padding: 0.3rem 0.6rem;
@@ -49,13 +53,13 @@
 }
 
 .kvRemove:hover {
-  background-color: #9b2c2c;
+  background-color: #555555;
 }
 
 .kvAdd {
   margin-top: 1rem;
   padding: 0.6rem 1.2rem;
-  background-color: #4f46e5;
+  background-color: #666666;
   color: white;
   border: none;
   border-radius: 6px;
@@ -66,16 +70,14 @@
 }
 
 .kvAdd:hover {
-  background-color: #4338ca;
+  background-color: #444444;
 }
 
-/* Drag & Drop visual */
 .kvRow.drag-over {
-  border: 2px dashed #4f46e5;
-  background-color: #e0e7ff;
+  border: 2px dashed #666666;
+  background-color: #dddddd;
 }
 
-/* Responsive */
 @media (max-width: 480px) {
   .kvRow {
     flex-direction: column;

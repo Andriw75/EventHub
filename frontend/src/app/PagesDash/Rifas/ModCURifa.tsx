@@ -4,6 +4,7 @@ import type {
   RifaCreate,
   RifaOut,
   RifaUpdate,
+  EventState,
 } from "../../../domain/personEvents";
 import styles from "./ModCURifa.module.css";
 import KVList from "../../common/components/KVList";
@@ -134,6 +135,7 @@ export default function ModCURifa(props: ModCURifaProps) {
   const [metadata, setMetadata] = createSignal<Record<string, any>>({});
   const [loading, setLoading] = createSignal(false);
   const [previewOriginal, setPreviewOriginal] = createSignal(false);
+  const [estado, setEstado] = createSignal<EventState | "">("");
 
   const isEditing = createMemo(() => !!props.initialData?.id);
 
@@ -142,6 +144,7 @@ export default function ModCURifa(props: ModCURifaProps) {
 
     if (rifa) {
       setNombre(rifa.nombre ?? "");
+      setEstado((rifa as any).estado ?? "");
       setFechaInicio(toDateInputValue(rifa.fecha_inicio));
       setFechaFin(toDateInputValue(rifa.fecha_fin));
       setNumeroInicio(String(rifa.numero_inicio ?? 1));
@@ -160,6 +163,7 @@ export default function ModCURifa(props: ModCURifaProps) {
     }
 
     setNombre("");
+    setEstado("");
     setFechaInicio("");
     setFechaFin("");
     setNumeroInicio("1");
@@ -191,6 +195,7 @@ export default function ModCURifa(props: ModCURifaProps) {
     fechaFin: toDateInputValue(props.initialData?.fecha_fin),
     numeroInicio: String(props.initialData?.numero_inicio ?? 1),
     numeroFin: String(props.initialData?.numero_fin ?? 100),
+    estado: (props.initialData as any)?.estado ?? "",
   }));
 
   const originalReservedNumbers = createMemo(() =>
@@ -203,6 +208,7 @@ export default function ModCURifa(props: ModCURifaProps) {
     fechaFin: fechaFin(),
     numeroInicio: numeroInicio(),
     numeroFin: numeroFin(),
+    estado: estado(),
   }));
 
   const displayScalar = (
@@ -244,6 +250,7 @@ export default function ModCURifa(props: ModCURifaProps) {
 
     return (
       changed("nombre") ||
+      changed("estado") ||
       changed("fechaInicio") ||
       changed("fechaFin") ||
       changed("numeroInicio") ||
@@ -257,6 +264,7 @@ export default function ModCURifa(props: ModCURifaProps) {
     if (!props.initialData) return;
 
     setNombre(props.initialData.nombre ?? "");
+    setEstado((props.initialData as any)?.estado ?? "");
     setFechaInicio(toDateInputValue(props.initialData.fecha_inicio));
     setFechaFin(toDateInputValue(props.initialData.fecha_fin));
     setNumeroInicio(String(props.initialData.numero_inicio ?? 1));
@@ -331,6 +339,7 @@ export default function ModCURifa(props: ModCURifaProps) {
 
     const basePayload = {
       nombre: nombreValue,
+      estado: estado() || null,
       fecha_inicio: fechaInicio() || null,
       fecha_fin: fechaFin() || null,
       numero_inicio: numeroInicioValue,
@@ -346,6 +355,7 @@ export default function ModCURifa(props: ModCURifaProps) {
         const payload: RifaUpdate = {};
 
         if (changed("nombre")) payload.nombre = nombreValue;
+        if (changed("estado")) payload.estado = basePayload.estado;
         if (changed("fechaInicio"))
           payload.fecha_inicio = fechaInicio() || null;
         if (changed("fechaFin")) payload.fecha_fin = fechaFin() || null;
@@ -356,11 +366,9 @@ export default function ModCURifa(props: ModCURifaProps) {
         if (metadataChanged()) payload.metadata = metadata();
 
         await updateRifa(props.initialData.id, payload);
-        
       } else {
         const payload: RifaCreate = basePayload as RifaCreate;
         await createRifa(payload);
-        
       }
 
       props.onSaved?.();
@@ -380,19 +388,36 @@ export default function ModCURifa(props: ModCURifaProps) {
       </h1>
 
       <form class={styles.modalContent} onSubmit={handleSubmit}>
-        <div class={styles.field}>
-          <label class={styles.label} for="rifa-nombre">
-            Nombre
-          </label>
-          <input
-            id="rifa-nombre"
-            class={styles.modalInput}
-            classList={{ [styles.campoModificado]: changed("nombre") }}
-            type="text"
-            placeholder="Nombre de la rifa"
-            value={displayScalar("nombre")}
-            onInput={(e) => setNombre(e.currentTarget.value)}
-          />
+        <div class={styles.dateRow}>
+          <div class={styles.field}>
+            <label class={styles.label} for="rifa-nombre">
+              Nombre
+            </label>
+            <input
+              class={styles.modalInput}
+              classList={{ [styles.campoModificado]: changed("nombre") }}
+              type="text"
+              placeholder="Nombre de la rifa"
+              value={displayScalar("nombre")}
+              onInput={(e) => setNombre(e.currentTarget.value)}
+            />
+          </div>
+          <div class={styles.field}>
+            <label class={styles.label} for="rifa-estado">
+              Estado
+            </label>
+            <select
+              class={styles.modalInput}
+              classList={{ [styles.campoModificado]: changed("estado") }}
+              value={displayScalar("estado")}
+              onChange={(e) => setEstado(e.currentTarget.value as EventState)}
+            >
+              <option value="">Sin estado</option>
+              <option value="Proximo">Próximo</option>
+              <option value="En_curso">En curso</option>
+              <option value="Finalizado">Finalizada</option>
+            </select>
+          </div>
         </div>
 
         <div class={styles.dateRow}>
@@ -401,7 +426,6 @@ export default function ModCURifa(props: ModCURifaProps) {
               Fecha de inicio
             </label>
             <input
-              id="rifa-fecha-inicio"
               class={styles.modalInput}
               classList={{ [styles.campoModificado]: changed("fechaInicio") }}
               type="date"
@@ -415,7 +439,6 @@ export default function ModCURifa(props: ModCURifaProps) {
               Fecha de fin
             </label>
             <input
-              id="rifa-fecha-fin"
               class={styles.modalInput}
               classList={{ [styles.campoModificado]: changed("fechaFin") }}
               type="date"
@@ -431,7 +454,6 @@ export default function ModCURifa(props: ModCURifaProps) {
               Número inicio
             </label>
             <input
-              id="rifa-numero-inicio"
               class={styles.modalInput}
               classList={{ [styles.campoModificado]: changed("numeroInicio") }}
               type="number"
@@ -447,7 +469,6 @@ export default function ModCURifa(props: ModCURifaProps) {
               Número fin
             </label>
             <input
-              id="rifa-numero-fin"
               class={styles.modalInput}
               classList={{ [styles.campoModificado]: changed("numeroFin") }}
               type="number"

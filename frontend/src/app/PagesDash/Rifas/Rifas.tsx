@@ -1,4 +1,4 @@
-import { createSignal } from "solid-js";
+import { createSignal, For } from "solid-js";
 import ModCURifa from "./ModCURifa";
 import { fetchEventsType } from "../../../infrastructure/personEvents";
 import styles from "./Rifas.module.css";
@@ -151,7 +151,24 @@ export default function Rifas() {
               {rifa.metadata && (
                 <details class={styles.metadata}>
                   <summary>Ver Metadata</summary>
-                  <pre>{JSON.stringify(rifa.metadata, null, 2)}</pre>
+                  <table class={styles.metadataTable}>
+                    <tbody>
+                      <For each={Object.entries(rifa.metadata)}>
+                        {([key, value]) => (
+                          <tr>
+                            <td class={styles.metadataKey}>{key}</td>
+                            <td class={styles.metadataValue}>
+                              {typeof value === "object" ? (
+                                <pre>{JSON.stringify(value, null, 2)}</pre>
+                              ) : (
+                                value.toString()
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </For>
+                    </tbody>
+                  </table>
                 </details>
               )}
             </div>

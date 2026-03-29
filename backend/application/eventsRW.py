@@ -166,7 +166,16 @@ def eventsRW(container: ServiceContainer, auth_router: AuthRouter):
         data: RifaUpdate,
         current_user: UserCokie = Depends(auth_router.get_current_user)
     ):
-        return await rep_events.update_rifa(event_id, current_user.id, data)
+        updated_event = await rep_events.update_rifa(event_id, current_user.id, data)
+        
+        channel = f"event_{event_id}"
+        
+        await ws_mng.broadcast_channel(channel, {
+            "event": "event_data",
+            "data": updated_event.model_dump(mode='json')
+        })
+        
+        return updated_event
 
     # -------------------------
     # 📌 UPDATE SUBASTA
@@ -198,7 +207,18 @@ def eventsRW(container: ServiceContainer, auth_router: AuthRouter):
         event_id: int,
         current_user: UserCokie = Depends(auth_router.get_current_user)
     ):
+        channel = f"event_{event_id}"
+
+        await ws_mng.broadcast_channel(channel, {
+            "event": "event_deleted",
+            "message": f"El evento con ID {event_id} ha sido eliminado."
+        })
+
+        if channel in ws_mng.channels:
+            del ws_mng.channels[channel]
+
         await rep_events.delete_event(event_id, current_user.id)
+        
         return {"detail": "Evento eliminado correctamente"}
 
     return router

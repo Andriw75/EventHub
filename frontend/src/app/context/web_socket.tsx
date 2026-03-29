@@ -6,7 +6,7 @@ interface WebSocketContextType {
   connect: () => void;
   disconnect: () => void;
   sendMessage: (msg: any) => void;
-  addMessageListener: (cb: (data: any) => void) => void;
+  addMessageListener: (cb: (data: any) => void) => () => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextType>();
@@ -14,7 +14,8 @@ const WebSocketContext = createContext<WebSocketContextType>();
 export const WebSocketProvider = (props: { children: JSX.Element }) => {
   const [socket, setSocket] = createSignal<WebSocket | null>(null);
   const [isConnected, setIsConnected] = createSignal(false);
-  const messageListeners: Array<(data: any) => void> = [];
+
+  let messageListeners: Array<(data: any) => void> = [];
 
   const wsUrl = import.meta.env.VITE_CONEX_WS;
 
@@ -36,7 +37,8 @@ export const WebSocketProvider = (props: { children: JSX.Element }) => {
       } catch {
         data = event.data;
       }
-      messageListeners.forEach((cb) => cb(data));
+
+      [...messageListeners].forEach((cb) => cb(data));
     };
 
     ws.onerror = (err) => {
@@ -53,8 +55,11 @@ export const WebSocketProvider = (props: { children: JSX.Element }) => {
   const disconnect = () => {
     const ws = socket();
     if (ws) ws.close();
+
     setSocket(null);
     setIsConnected(false);
+
+    messageListeners = [];
   };
 
   const sendMessage = (msg: any) => {
@@ -68,6 +73,10 @@ export const WebSocketProvider = (props: { children: JSX.Element }) => {
 
   const addMessageListener = (cb: (data: any) => void) => {
     messageListeners.push(cb);
+
+    return () => {
+      messageListeners = messageListeners.filter((fn) => fn !== cb);
+    };
   };
 
   return (

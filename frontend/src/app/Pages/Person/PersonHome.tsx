@@ -15,6 +15,7 @@ import Pagination from "../../common/components/Pagination";
 import styles from "./PersonHome.module.css";
 import type { ApiResponse } from "../../../domain/utils";
 import type { PersonEvents } from "../../../domain/personEvents";
+import { setSelectedEvent } from "../../context/selectedEvent";
 
 export default function PersonHome() {
   const params = useParams<{ person?: string }>();
@@ -104,9 +105,10 @@ export default function PersonHome() {
                 <li class={`${styles.card} ${ev.tipo}`}>
                   <button
                     class={styles.button}
-                    onClick={() =>
-                      navigate(`/${params.person}/${String(ev.nombre)}`)
-                    }
+                    onClick={() => {
+                      setSelectedEvent(ev);
+                      navigate(`/${params.person}/${String(ev.nombre)}`);
+                    }}
                   >
                     <div class={styles.eventHeader}>
                       <h2 class={styles.eventTitle}>{ev.nombre}</h2>

@@ -27,7 +27,6 @@ export default function App() {
 
       <Route path="/:person/:event" component={() => <EventDetails />} />
       <Route path="/" component={() => <Navigate href="/login" />} />
-      {/* <Route path="*" component={() => <Navigate href="/login" />} /> */}
     </>
   );
 }

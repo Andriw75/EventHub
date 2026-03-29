@@ -111,6 +111,7 @@ export default function EventDetails() {
     const unsubscribe = addMessageListener((msg) => {
       if (msg.event === "event_data" && msg.data?.id === currentId) {
         setEventData(msg.data as EventFullOut);
+        console.log(eventData());
       }
     });
 
@@ -298,7 +299,7 @@ export default function EventDetails() {
                         Rango: {rifa().numero_inicio} - {rifa().numero_fin}
                       </span>
                       <span class={styles.statBox}>
-                        Activos: {rifa().numeros_reservados.length}
+                        Activos: {rifa().numeros_reservados?.length}
                       </span>
                     </div>
                   </div>

@@ -391,9 +391,17 @@ class RepEvents:
                     await conn.execute(query, *rifa_params)
 
                 # 4. Devolver el evento actualizado (reconstruir metadata)
-                return EventOut.model_validate({
+                rifa_row = await conn.fetchrow(
+                    "SELECT numero_inicio, numero_fin, numeros_reservados FROM Rifa WHERE event_id = $1",
+                    event_id
+                )
+
+                return RifaOut.model_validate({
                     **dict(event_row),
-                    "metadata": json.loads(event_row["metadata"]) if isinstance(event_row["metadata"], str) else event_row["metadata"]
+                    "metadata": json.loads(event_row["metadata"]) if isinstance(event_row["metadata"], str) else event_row["metadata"],
+                    "numero_inicio": rifa_row["numero_inicio"],
+                    "numero_fin": rifa_row["numero_fin"],
+                    "numeros_reservados": rifa_row["numeros_reservados"] or []
                 })
 
     async def update_subasta(self, event_id: int, user_id: int, data: SubastaUpdate) -> EventOut:

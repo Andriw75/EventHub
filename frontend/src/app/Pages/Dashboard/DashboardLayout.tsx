@@ -8,6 +8,7 @@ import { useNavigate } from "@solidjs/router";
 import Rifas from "../../PagesDash/Rifas/Rifas";
 import { ConfirmContainer } from "../../common/UI/Confirm/confirmStore";
 import ToastContainer from "../../common/UI/Toast/ToastContainer";
+import Subasta from "../../PagesDash/Subasta/Subasta";
 
 const DashboardLayout = () => {
   const { user } = useAuth();
@@ -30,7 +31,7 @@ const DashboardLayout = () => {
       page = <Rifas />;
       break;
     case `/${params.person}/dashboard/events/subasta`:
-      page = <>subasta</>;
+      page = <Subasta />;
       break;
     case `/${params.person}/dashboard/events/venta-limitada`:
       page = <>venta-limitada</>;

@@ -1,4 +1,3 @@
-//TODO: cuando se busque por pagina desabilitarlo y ocultar la grilla pero sigue mostrandoce el paginado porque no seesta actualizando, en cambio cuando se busque completo ocultar ambos
 import { createSignal, For, onMount, createMemo, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import ModCURifa from "./ModCURifa";
@@ -23,6 +22,21 @@ import type { ApiError } from "../../../domain/utils";
 
 type RangeType = "hoy" | "semana" | "mes" | "personalizado";
 
+function getRangeByType(value: RangeType) {
+  let inicio: string | null = null;
+  let fin: string | null = null;
+
+  if (value === "hoy") {
+    ({ inicio, fin } = getTodayRange());
+  } else if (value === "semana") {
+    ({ inicio, fin } = getWeekRange());
+  } else if (value === "mes") {
+    ({ inicio, fin } = getMonthRange());
+  }
+
+  return { inicio, fin };
+}
+
 export default function Rifas() {
   const navigate = useNavigate();
 
@@ -36,9 +50,11 @@ export default function Rifas() {
 
   const [showModal, setShowModal] = createSignal(false);
   const [selectedRifa, setSelectedRifa] = createSignal<RifaOut | null>(null);
+
   const [range, setRange] = createSignal<RangeType>("semana");
   const [fechaInicio, setFechaInicio] = createSignal<string | null>(null);
   const [fechaFin, setFechaFin] = createSignal<string | null>(null);
+
   const [loading, setLoading] = createSignal(false);
   const [rifas, setRifas] = createSignal<RifaOut[]>([]);
 
@@ -46,17 +62,7 @@ export default function Rifas() {
     setRange(value);
     setPage(1);
 
-    let inicio: string | null = null;
-    let fin: string | null = null;
-
-    if (value === "hoy") {
-      ({ inicio, fin } = getTodayRange());
-    } else if (value === "semana") {
-      ({ inicio, fin } = getWeekRange());
-    } else if (value === "mes") {
-      ({ inicio, fin } = getMonthRange());
-    }
-
+    const { inicio, fin } = getRangeByType(value);
     setFechaInicio(inicio);
     setFechaFin(fin);
   }
@@ -95,6 +101,7 @@ export default function Rifas() {
         navigate("/login");
         return;
       }
+
       setRifas([]);
       setTotalCount(0);
     } finally {
@@ -120,86 +127,120 @@ export default function Rifas() {
   return (
     <>
       <div class={styles.container}>
-        <div class={styles.header}>
-          <button
-            class={styles.openBtn}
-            onClick={() => {
-              setSelectedRifa(null);
-              setShowModal(true);
-            }}
-          >
-            Crear
-          </button>
+        <div class={styles.toolbar}>
+          <div class={styles.titleBlock}>
+            <h1 class={styles.title}>Rifas</h1>
+          </div>
 
-          <div class={styles.filters}>
-            <select
-              class={styles.select}
-              value={range()}
-              onChange={(e) =>
-                handleRangeChange(e.currentTarget.value as RangeType)
-              }
-            >
-              <option value="hoy">Hoy</option>
-              <option value="semana">Esta semana</option>
-              <option value="mes">Este mes</option>
-              <option value="personalizado">Personalizado</option>
-            </select>
-
-            <input
-              type="date"
-              class={styles.input}
-              disabled={range() !== "personalizado"}
-              value={fechaInicio() ?? ""}
-              onInput={(e) => setFechaInicio(e.currentTarget.value)}
-            />
-
-            <input
-              type="date"
-              class={styles.input}
-              disabled={range() !== "personalizado"}
-              value={fechaFin() ?? ""}
-              onInput={(e) => setFechaFin(e.currentTarget.value)}
-            />
-
+          <div class={styles.actionsBar}>
             <button
-              class={styles.searchBtn}
-              onClick={handleNewSearch}
-              disabled={loading()}
+              class={styles.primaryBtn}
+              onClick={() => {
+                setSelectedRifa(null);
+                setShowModal(true);
+              }}
             >
-              {loading() ? "Buscando..." : "Buscar"}
+              Crear rifa
             </button>
           </div>
         </div>
 
+        <div class={styles.filtersCard}>
+          <div class={styles.filters}>
+            <div class={styles.field}>
+              <label class={styles.label}>Rango</label>
+              <select
+                class={styles.select}
+                value={range()}
+                onChange={(e) =>
+                  handleRangeChange(e.currentTarget.value as RangeType)
+                }
+              >
+                <option value="hoy">Hoy</option>
+                <option value="semana">Esta semana</option>
+                <option value="mes">Este mes</option>
+                <option value="personalizado">Personalizado</option>
+              </select>
+            </div>
+
+            <div class={styles.field}>
+              <label class={styles.label}>Desde</label>
+              <input
+                type="date"
+                class={styles.input}
+                disabled={range() !== "personalizado"}
+                value={fechaInicio() ?? ""}
+                onInput={(e) => setFechaInicio(e.currentTarget.value)}
+              />
+            </div>
+
+            <div class={styles.field}>
+              <label class={styles.label}>Hasta</label>
+              <input
+                type="date"
+                class={styles.input}
+                disabled={range() !== "personalizado"}
+                value={fechaFin() ?? ""}
+                onInput={(e) => setFechaFin(e.currentTarget.value)}
+              />
+            </div>
+
+            <div class={styles.fieldAction}>
+              <label class={styles.labelInvisible}>Buscar</label>
+              <button
+                class={styles.secondaryBtn}
+                onClick={handleNewSearch}
+                disabled={loading()}
+              >
+                {loading() ? "Buscando..." : "Buscar"}
+              </button>
+            </div>
+          </div>
+        </div>
+
         {loading() ? (
-          <LoadingLoop width="100%" height="42rem" />
+          <div class={styles.loadingWrap}>
+            <LoadingLoop width="100%" height="42rem" />
+          </div>
         ) : (
           <>
             <div class={styles.grid}>
               {rifas().map((rifa) => {
                 const total = rifa.numero_fin - rifa.numero_inicio + 1;
                 const ocupados = rifa.numeros_reservados.length;
+                const porcentaje =
+                  total > 0 ? Math.round((ocupados / total) * 100) : 0;
 
                 return (
-                  <div class={styles.card}>
+                  <article class={styles.card}>
                     <div class={styles.cardHeader}>
-                      <h3>{rifa.nombre}</h3>
-                      <div class={styles.actions}>
+                      <div class={styles.cardTitleBlock}>
+                        <h3 class={styles.cardTitle}>{rifa.nombre}</h3>
+                        <span class={styles.badge}>{rifa.estado}</span>
+                      </div>
+
+                      <div class={styles.cardActions}>
                         <button
+                          class={styles.iconBtn}
                           onClick={() => {
                             setSelectedRifa(rifa);
                             setShowModal(true);
                           }}
+                          aria-label="Editar rifa"
+                          title="Editar"
                         >
                           ✏️
                         </button>
+
                         <button
+                          class={styles.iconBtn}
                           onClick={async () => {
                             const result = await confirm(
                               "Eliminar",
                               `Seguro de eliminar la rifa ${rifa.nombre}`,
                               async () => await deleteEvent(rifa.id),
                             );
+
                             if (result === null) return;
 
                             if (result?.error) {
@@ -215,32 +256,59 @@ export default function Rifas() {
                               await handleSearch(page());
                             }
                           }}
+                          aria-label="Eliminar rifa"
+                          title="Eliminar"
                         >
                           🗑️
                         </button>
                       </div>
                     </div>
 
-                    <p>
-                      <strong>Estado:</strong> {rifa.estado}
-                    </p>
+                    <div class={styles.infoGrid}>
+                      <div class={styles.infoItem}>
+                        <span class={styles.infoLabel}>Inicio</span>
+                        <span class={styles.infoValue}>
+                          {formatDateTime(rifa.fecha_inicio)}
+                        </span>
+                      </div>
 
-                    <p>
-                      <strong>Inicio:</strong>{" "}
-                      {formatDateTime(rifa.fecha_inicio)}
-                    </p>
-                    <p>
-                      <strong>Fin:</strong> {formatDateTime(rifa.fecha_fin)}
-                    </p>
+                      <div class={styles.infoItem}>
+                        <span class={styles.infoLabel}>Fin</span>
+                        <span class={styles.infoValue}>
+                          {formatDateTime(rifa.fecha_fin)}
+                        </span>
+                      </div>
 
-                    <p>
-                      <strong>Rango:</strong> {rifa.numero_inicio} -{" "}
-                      {rifa.numero_fin}
-                    </p>
+                      <div class={styles.infoItem}>
+                        <span class={styles.infoLabel}>Rango</span>
+                        <span class={styles.infoValue}>
+                          {rifa.numero_inicio} - {rifa.numero_fin}
+                        </span>
+                      </div>
 
-                    <p>
-                      <strong>Ocupados:</strong> {ocupados} / {total}
-                    </p>
+                      <div class={styles.infoItem}>
+                        <span class={styles.infoLabel}>Reservados</span>
+                        <span class={styles.infoValue}>
+                          {ocupados} / {total}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div class={styles.progressSection}>
+                      <div class={styles.progressMeta}>
+                        <span class={styles.progressLabel}>Ocupación</span>
+                        <span class={styles.progressPercent}>
+                          {porcentaje}%
+                        </span>
+                      </div>
+
+                      <div class={styles.progressBar}>
+                        <div
+                          class={styles.progressFill}
+                          style={{ width: `${porcentaje}%` }}
+                        />
+                      </div>
+                    </div>
 
                     <p class={styles.createdAt}>
                       Creado: {formatDateTime(rifa.created_at)}
@@ -248,30 +316,35 @@ export default function Rifas() {
 
                     {rifa.metadata && (
                       <details class={styles.metadata}>
-                        <summary>Ver Metadata</summary>
-                        <table class={styles.metadataTable}>
-                          <tbody>
-                            <For each={Object.entries(rifa.metadata)}>
-                              {([key, value]) => (
-                                <tr>
-                                  <td class={styles.metadataKey}>{key}</td>
-                                  <td class={styles.metadataValue}>
-                                    {typeof value === "object" ? (
-                                      <pre>
-                                        {JSON.stringify(value, null, 2)}
-                                      </pre>
-                                    ) : (
-                                      value.toString()
-                                    )}
-                                  </td>
-                                </tr>
-                              )}
-                            </For>
-                          </tbody>
-                        </table>
+                        <summary class={styles.metadataSummary}>
+                          Ver metadata
+                        </summary>
+
+                        <div class={styles.metadataBox}>
+                          <table class={styles.metadataTable}>
+                            <tbody>
+                              <For each={Object.entries(rifa.metadata)}>
+                                {([key, value]) => (
+                                  <tr>
+                                    <td class={styles.metadataKey}>{key}</td>
+                                    <td class={styles.metadataValue}>
+                                      {typeof value === "object" ? (
+                                        <pre>
+                                          {JSON.stringify(value, null, 2)}
+                                        </pre>
+                                      ) : (
+                                        value.toString()
+                                      )}
+                                    </td>
+                                  </tr>
+                                )}
+                              </For>
+                            </tbody>
+                          </table>
+                        </div>
                       </details>
                     )}
-                  </div>
+                  </article>
                 );
               })}
             </div>

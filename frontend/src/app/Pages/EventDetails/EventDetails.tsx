@@ -9,7 +9,11 @@ import {
 } from "solid-js";
 import { useWebSocket } from "../../context/web_socket";
 import { selectedEvent, selectedPerson } from "../../context/selectedEvent";
-import type { EventFullOut, RifaOut } from "../../../domain/personEvents";
+import type {
+  EventFullOut,
+  RifaOut,
+  SubastaOut,
+} from "../../../domain/personEvents";
 import styles from "./EventDetails.module.css";
 import { useNavigate } from "@solidjs/router";
 
@@ -22,6 +26,14 @@ function formatDate(value?: string | null) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function formatCurrency(value?: number | null) {
+  return new Intl.NumberFormat("es-PE", {
+    style: "currency",
+    currency: "PEN",
+    maximumFractionDigits: 2,
+  }).format(value ?? 0);
 }
 
 function formatState(state?: string) {
@@ -54,6 +66,10 @@ function isRifa(event: EventFullOut | null): event is RifaOut {
   return !!event && event.tipo === "rifa";
 }
 
+function isSubasta(event: EventFullOut | null): event is SubastaOut {
+  return !!event && event.tipo === "subasta";
+}
+
 function buildRange(min: number, max: number) {
   if (!Number.isFinite(min) || !Number.isFinite(max)) return [];
   if (min > max) return [];
@@ -76,6 +92,11 @@ export default function EventDetails() {
   const rifaData = createMemo(() => {
     const data = eventData();
     return isRifa(data) ? data : null;
+  });
+
+  const subastaData = createMemo(() => {
+    const data = eventData();
+    return isSubasta(data) ? data : null;
   });
 
   const allNumbers = createMemo(() => {
@@ -115,9 +136,6 @@ export default function EventDetails() {
 
       if (msg.event === "event_deleted") {
         if (currentId) {
-          // tenemos que pocicionar mejor el toast container para que funcione
-          //addToast({ message: String(msg.event), type: "error" });
-
           // @ts-ignore
           const _ = alert(msg.message);
           goBackToUser();
@@ -172,176 +190,214 @@ export default function EventDetails() {
   const goBackToUser = () => {
     const person = selectedPerson();
     if (!person) return;
-
     navigate(`/${person}`);
   };
 
   return (
-    <>
-      <section class={styles.wrapper}>
-        <button class={styles.backButton} onClick={goBackToUser}>
-          ← Volver
-        </button>
-        <header class={styles.header}>
-          <div>
-            <p class={styles.kicker}>Detalle del evento</p>
-            <h1 class={styles.title}>
-              {eventData()?.nombre ??
-                currentEvent()?.nombre ??
-                "Sin evento seleccionado"}
-            </h1>
-            <p class={styles.subtitle}>{connectionText()}</p>
-          </div>
+    <section class={styles.wrapper}>
+      <button class={styles.backButton} onClick={goBackToUser}>
+        ← Volver
+      </button>
 
-          <div class={`${styles.connectionPill} ${connectionClass()}`}>
-            {isConnected() ? "Conectado" : "Conectando"}
-          </div>
-        </header>
+      <header class={styles.header}>
+        <div>
+          <p class={styles.kicker}>Detalle del evento</p>
+          <h1 class={styles.title}>
+            {eventData()?.nombre ??
+              currentEvent()?.nombre ??
+              "Sin evento seleccionado"}
+          </h1>
+          <p class={styles.subtitle}>{connectionText()}</p>
+        </div>
 
+        <div class={`${styles.connectionPill} ${connectionClass()}`}>
+          {isConnected() ? "Conectado" : "Conectando"}
+        </div>
+      </header>
+
+      <Show
+        when={currentEvent()?.id}
+        fallback={
+          <div class={styles.emptyState}>
+            Selecciona un evento para mostrar sus datos.
+          </div>
+        }
+      >
         <Show
-          when={currentEvent()?.id}
+          when={eventData()}
           fallback={
-            <div class={styles.emptyState}>
-              Selecciona un evento para mostrar sus datos.
+            <div class={styles.loadingCard}>
+              <div class={styles.loadingDot} />
+              <div>
+                <strong>Esperando información</strong>
+                <p>
+                  El evento ya está seleccionado, falta recibir los datos del
+                  servidor.
+                </p>
+              </div>
             </div>
           }
         >
-          <Show
-            when={eventData()}
-            fallback={
-              <div class={styles.loadingCard}>
-                <div class={styles.loadingDot} />
-                <div>
-                  <strong>Esperando información</strong>
-                  <p>
-                    El evento ya está seleccionado, falta recibir los datos del
-                    servidor.
-                  </p>
+          <div class={styles.content}>
+            <div class={styles.summaryGrid}>
+              <article class={styles.summaryCard}>
+                <span class={styles.label}>Tipo</span>
+                <strong>
+                  {eventData()?.tipo === "rifa"
+                    ? "Rifa"
+                    : eventData()?.tipo === "subasta"
+                      ? "Subasta"
+                      : "Venta limitada"}
+                </strong>
+              </article>
+
+              <article class={styles.summaryCard}>
+                <span class={styles.label}>Estado</span>
+                <strong class={getStateClass(eventData()?.estado)}>
+                  {formatState(eventData()?.estado)}
+                </strong>
+              </article>
+
+              <article class={styles.summaryCard}>
+                <span class={styles.label}>Inicio</span>
+                <strong>{formatDate(eventData()?.fecha_inicio)}</strong>
+              </article>
+
+              <article class={styles.summaryCard}>
+                <span class={styles.label}>Fin</span>
+                <strong>{formatDate(eventData()?.fecha_fin)}</strong>
+              </article>
+            </div>
+
+            <div class={styles.detailsGrid}>
+              <article class={styles.panel}>
+                <h2 class={styles.panelTitle}>Información general</h2>
+
+                <div class={styles.infoList}>
+                  <div class={styles.infoRow}>
+                    <span>Nombre</span>
+                    <strong>{eventData()?.nombre}</strong>
+                  </div>
+                  <div class={styles.infoRow}>
+                    <span>ID</span>
+                    <strong>#{eventData()?.id}</strong>
+                  </div>
+                  <div class={styles.infoRow}>
+                    <span>Usuario</span>
+                    <strong>{eventData()?.usuario_id}</strong>
+                  </div>
+                  <div class={styles.infoRow}>
+                    <span>Creado</span>
+                    <strong>{formatDate(eventData()?.created_at)}</strong>
+                  </div>
                 </div>
-              </div>
-            }
-          >
-            <div class={styles.content}>
-              <div class={styles.summaryGrid}>
-                <article class={styles.summaryCard}>
-                  <span class={styles.label}>Tipo</span>
-                  <strong>Rifa</strong>
-                </article>
+              </article>
 
-                <article class={styles.summaryCard}>
-                  <span class={styles.label}>Estado</span>
-                  <strong class={getStateClass(eventData()?.estado)}>
-                    {formatState(eventData()?.estado)}
-                  </strong>
-                </article>
+              <article class={styles.panel}>
+                <h2 class={styles.panelTitle}>Metadata</h2>
 
-                <article class={styles.summaryCard}>
-                  <span class={styles.label}>Inicio</span>
-                  <strong>{formatDate(eventData()?.fecha_inicio)}</strong>
-                </article>
+                <Show
+                  when={metadataEntries().length > 0}
+                  fallback={
+                    <p class={styles.mutedText}>Sin metadata disponible.</p>
+                  }
+                >
+                  <div class={styles.metadataGrid}>
+                    <For each={metadataEntries()}>
+                      {([key, value]) => (
+                        <div class={styles.metadataItem}>
+                          <span>{key}</span>
+                          <strong>{String(value)}</strong>
+                        </div>
+                      )}
+                    </For>
+                  </div>
+                </Show>
+              </article>
+            </div>
 
-                <article class={styles.summaryCard}>
-                  <span class={styles.label}>Fin</span>
-                  <strong>{formatDate(eventData()?.fecha_fin)}</strong>
-                </article>
-              </div>
-
-              <div class={styles.detailsGrid}>
+            <Show when={rifaData()}>
+              {(rifa) => (
                 <article class={styles.panel}>
-                  <h2 class={styles.panelTitle}>Información general</h2>
+                  <div class={styles.rifaHeader}>
+                    <div>
+                      <h2 class={styles.panelTitle}>Números de la rifa</h2>
+                      <p class={styles.mutedText}>
+                        Se muestran todos los números del rango. Los activos
+                        quedan resaltados.
+                      </p>
+                    </div>
 
-                  <div class={styles.infoList}>
-                    <div class={styles.infoRow}>
-                      <span>Nombre</span>
-                      <strong>{eventData()?.nombre}</strong>
-                    </div>
-                    <div class={styles.infoRow}>
-                      <span>ID</span>
-                      <strong>#{eventData()?.id}</strong>
-                    </div>
-                    <div class={styles.infoRow}>
-                      <span>Usuario</span>
-                      <strong>{eventData()?.usuario_id}</strong>
-                    </div>
-                    <div class={styles.infoRow}>
-                      <span>Creado</span>
-                      <strong>{formatDate(eventData()?.created_at)}</strong>
+                    <div class={styles.rifaStats}>
+                      <span class={styles.statBox}>
+                        Rango: {rifa().numero_inicio} - {rifa().numero_fin}
+                      </span>
+                      <span class={styles.statBox}>
+                        Activos: {rifa().numeros_reservados?.length ?? 0}
+                      </span>
                     </div>
                   </div>
-                </article>
 
-                <article class={styles.panel}>
-                  <h2 class={styles.panelTitle}>Metadata</h2>
+                  <div class={styles.numbersGrid}>
+                    <For each={allNumbers()}>
+                      {(number) => {
+                        const active = () => activeNumbers().has(number);
 
-                  <Show
-                    when={metadataEntries().length > 0}
-                    fallback={
-                      <p class={styles.mutedText}>Sin metadata disponible.</p>
-                    }
-                  >
-                    <div class={styles.metadataGrid}>
-                      <For each={metadataEntries()}>
-                        {([key, value]) => (
-                          <div class={styles.metadataItem}>
-                            <span>{key}</span>
-                            <strong>{String(value)}</strong>
+                        return (
+                          <div
+                            classList={{
+                              [styles.numberCell]: true,
+                              [styles.numberActive]: active(),
+                              [styles.numberInactive]: !active(),
+                            }}
+                            title={active() ? "Reservado" : "Disponible"}
+                          >
+                            {number}
                           </div>
-                        )}
-                      </For>
-                    </div>
-                  </Show>
+                        );
+                      }}
+                    </For>
+                  </div>
                 </article>
-              </div>
+              )}
+            </Show>
 
-              <Show when={rifaData()}>
-                {(rifa) => (
-                  <article class={styles.panel}>
-                    <div class={styles.rifaHeader}>
-                      <div>
-                        <h2 class={styles.panelTitle}>Números de la rifa</h2>
-                        <p class={styles.mutedText}>
-                          Se muestran todos los números del rango. Los activos
-                          quedan resaltados.
-                        </p>
-                      </div>
-
-                      <div class={styles.rifaStats}>
-                        <span class={styles.statBox}>
-                          Rango: {rifa().numero_inicio} - {rifa().numero_fin}
-                        </span>
-                        <span class={styles.statBox}>
-                          Activos: {rifa().numeros_reservados?.length}
-                        </span>
-                      </div>
+            <Show when={subastaData()}>
+              {(subasta) => (
+                <article class={styles.panel}>
+                  <div class={styles.rifaHeader}>
+                    <div>
+                      <h2 class={styles.panelTitle}>Items de la subasta</h2>
+                      <p class={styles.mutedText}>
+                        Cada item muestra su precio máximo.
+                      </p>
                     </div>
 
-                    <div class={styles.numbersGrid}>
-                      <For each={allNumbers()}>
-                        {(number) => {
-                          const active = () => activeNumbers().has(number);
-
-                          return (
-                            <div
-                              classList={{
-                                [styles.numberCell]: true,
-                                [styles.numberActive]: active(),
-                                [styles.numberInactive]: !active(),
-                              }}
-                              title={active() ? "Reservado" : "Disponible"}
-                            >
-                              {number}
-                            </div>
-                          );
-                        }}
-                      </For>
+                    <div class={styles.rifaStats}>
+                      <span class={styles.statBox}>
+                        Items: {subasta().items?.length ?? 0}
+                      </span>
                     </div>
-                  </article>
-                )}
-              </Show>
-            </div>
-          </Show>
+                  </div>
+
+                  <div class={styles.itemGrid}>
+                    <For each={subasta().items ?? []}>
+                      {(item) => (
+                        <div class={styles.itemCard}>
+                          <strong class={styles.itemName}>{item.nombre}</strong>
+                          <span class={styles.itemPrice}>
+                            {formatCurrency(item.precio_maximo)}
+                          </span>
+                        </div>
+                      )}
+                    </For>
+                  </div>
+                </article>
+              )}
+            </Show>
+          </div>
         </Show>
-      </section>
-    </>
+      </Show>
+    </section>
   );
 }

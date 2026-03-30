@@ -1,3 +1,4 @@
+//TODO: cuando se busque por pagina desabilitarlo y ocultar la grilla pero sigue mostrandoce el paginado porque no seesta actualizando, en cambio cuando se busque completo ocultar ambos
 import { createSignal, For, onMount, createMemo, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import ModCURifa from "./ModCURifa";
@@ -171,7 +172,7 @@ export default function Rifas() {
         </div>
 
         {loading() ? (
-          <LoadingLoop width="100%" height="50rem" />
+          <LoadingLoop width="100%" height="42rem" />
         ) : (
           <>
             <div class={styles.grid}>

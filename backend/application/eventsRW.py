@@ -32,7 +32,6 @@ def eventsRW(container: ServiceContainer, auth_router: AuthRouter):
             return
 
         channel = f"event_{event_id}"
-
         event_data = await rep_events.get_event_full_by_id(event_id)
 
         if not event_data:
@@ -40,17 +39,16 @@ def eventsRW(container: ServiceContainer, auth_router: AuthRouter):
                 "event": "error",
                 "message": "event not found"
             })
-
             await ws_mng.disconnect(connection_id)
             return
 
         await ws_mng.subscribe(connection_id, channel)
         await ws.send_json({
             "event": "event_data",
-            "data": event_data.model_dump(mode='json')
+            "data": event_data.model_dump(mode="json")
         })
 
-    ws_mng.register_message_handler("suscribe_event",handle_event_subscription)
+    ws_mng.register_message_handler("suscribe_event", handle_event_subscription)
 
     async def handle_event_unsubscription(connection_id: str, ws: WebSocket, data: dict):
         event_id = data.get("event_id")
@@ -63,13 +61,21 @@ def eventsRW(container: ServiceContainer, auth_router: AuthRouter):
             return
 
         channel = f"event_{event_id}"
-
         await ws_mng.unsubscribe(connection_id, channel)
 
     ws_mng.register_message_handler("unsuscribe_event", handle_event_unsubscription)
 
+    def event_channel(event_id: int) -> str:
+        return f"event_{event_id}"
+
+    async def notify_event_update(event_id: int, updated_event):
+        await ws_mng.broadcast_channel(event_channel(event_id), {
+            "event": "event_data",
+            "data": updated_event.model_dump(mode="json")
+        })
+
     # -------------------------
-    # 📌 LISTAR EVENTOS
+    # LISTAR EVENTOS
     # -------------------------
     @router.get("/", response_model=list[EventOut])
     async def list_events(
@@ -112,7 +118,7 @@ def eventsRW(container: ServiceContainer, auth_router: AuthRouter):
             fecha_inicio=fecha_inicio,
             fecha_fin=fecha_fin
         )
-    
+
     @router.get("/by-type-count", response_model=int)
     async def count_events_by_type(
         tipo: EventType,
@@ -128,7 +134,7 @@ def eventsRW(container: ServiceContainer, auth_router: AuthRouter):
         )
 
     # -------------------------
-    # 📌 CREAR RIFA
+    # CREATE RIFA
     # -------------------------
     @router.post("/rifa", response_model=EventOut)
     async def create_rifa(
@@ -138,7 +144,7 @@ def eventsRW(container: ServiceContainer, auth_router: AuthRouter):
         return await rep_events.create_rifa(current_user.id, data)
 
     # -------------------------
-    # 📌 CREAR SUBASTA
+    # CREATE SUBASTA
     # -------------------------
     @router.post("/subasta", response_model=EventOut)
     async def create_subasta(
@@ -148,7 +154,7 @@ def eventsRW(container: ServiceContainer, auth_router: AuthRouter):
         return await rep_events.create_subasta(current_user.id, data)
 
     # -------------------------
-    # 📌 CREAR VENTA LIMITADA
+    # CREATE VENTA LIMITADA
     # -------------------------
     @router.post("/venta-limitada", response_model=EventOut)
     async def create_venta_limitada(
@@ -158,7 +164,7 @@ def eventsRW(container: ServiceContainer, auth_router: AuthRouter):
         return await rep_events.create_venta_limitada(current_user.id, data)
 
     # -------------------------
-    # 📌 UPDATE RIFA
+    # UPDATE RIFA
     # -------------------------
     @router.put("/rifa/{event_id}", response_model=EventOut)
     async def update_rifa(
@@ -167,18 +173,11 @@ def eventsRW(container: ServiceContainer, auth_router: AuthRouter):
         current_user: UserCokie = Depends(auth_router.get_current_user)
     ):
         updated_event = await rep_events.update_rifa(event_id, current_user.id, data)
-        
-        channel = f"event_{event_id}"
-        
-        await ws_mng.broadcast_channel(channel, {
-            "event": "event_data",
-            "data": updated_event.model_dump(mode='json')
-        })
-        
+        await notify_event_update(event_id, updated_event)
         return updated_event
 
     # -------------------------
-    # 📌 UPDATE SUBASTA
+    # UPDATE SUBASTA
     # -------------------------
     @router.put("/subasta/{event_id}", response_model=EventOut)
     async def update_subasta(
@@ -186,10 +185,12 @@ def eventsRW(container: ServiceContainer, auth_router: AuthRouter):
         data: SubastaUpdate,
         current_user: UserCokie = Depends(auth_router.get_current_user)
     ):
-        return await rep_events.update_subasta(event_id, current_user.id, data)
+        updated_event = await rep_events.update_subasta(event_id, current_user.id, data)
+        await notify_event_update(event_id, updated_event)
+        return updated_event
 
     # -------------------------
-    # 📌 UPDATE VENTA LIMITADA
+    # UPDATE VENTA LIMITADA
     # -------------------------
     @router.put("/venta-limitada/{event_id}", response_model=EventOut)
     async def update_venta_limitada(
@@ -197,17 +198,21 @@ def eventsRW(container: ServiceContainer, auth_router: AuthRouter):
         data: VentaLimitadaUpdate,
         current_user: UserCokie = Depends(auth_router.get_current_user)
     ):
-        return await rep_events.update_venta_limitada(event_id, current_user.id, data)
+        updated_event = await rep_events.update_venta_limitada(event_id, current_user.id, data)
+        await notify_event_update(event_id, updated_event)
+        return updated_event
 
     # -------------------------
-    # 📌 DELETE EVENTO
+    # DELETE EVENTO
     # -------------------------
     @router.delete("/{event_id}", response_model=dict)
     async def delete_event(
         event_id: int,
         current_user: UserCokie = Depends(auth_router.get_current_user)
     ):
-        channel = f"event_{event_id}"
+        channel = event_channel(event_id)
+
+        await rep_events.delete_event(event_id, current_user.id)
 
         await ws_mng.broadcast_channel(channel, {
             "event": "event_deleted",
@@ -217,8 +222,6 @@ def eventsRW(container: ServiceContainer, auth_router: AuthRouter):
         if channel in ws_mng.channels:
             del ws_mng.channels[channel]
 
-        await rep_events.delete_event(event_id, current_user.id)
-        
         return {"detail": "Evento eliminado correctamente"}
 
     return router

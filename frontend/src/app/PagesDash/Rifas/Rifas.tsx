@@ -8,34 +8,12 @@ import {
   fetchEventsTypeCount,
 } from "../../../infrastructure/personEvents";
 import styles from "./Rifas.module.css";
-import {
-  getTodayRange,
-  getWeekRange,
-  getMonthRange,
-  formatDateTime,
-} from "../../utils";
+import { type RangeType, getRangeByType, formatDateTime } from "../../utils";
 import type { RifaOut } from "../../../domain/personEvents";
 import { confirm } from "../../common/UI/Confirm/confirmStore";
 import { addToast } from "../../common/UI/Toast/toastStore";
 import LoadingLoop from "../../common/IconSVG/LoadingLoop";
 import type { ApiError } from "../../../domain/utils";
-
-type RangeType = "hoy" | "semana" | "mes" | "personalizado";
-
-function getRangeByType(value: RangeType) {
-  let inicio: string | null = null;
-  let fin: string | null = null;
-
-  if (value === "hoy") {
-    ({ inicio, fin } = getTodayRange());
-  } else if (value === "semana") {
-    ({ inicio, fin } = getWeekRange());
-  } else if (value === "mes") {
-    ({ inicio, fin } = getMonthRange());
-  }
-
-  return { inicio, fin };
-}
 
 export default function Rifas() {
   const navigate = useNavigate();

@@ -36,3 +36,20 @@ export function formatDateTime(dateStr: string | null) {
     second: "2-digit",
   });
 }
+
+export type RangeType = "hoy" | "semana" | "mes" | "personalizado";
+
+export function getRangeByType(value: RangeType) {
+  let inicio: string | null = null;
+  let fin: string | null = null;
+
+  if (value === "hoy") {
+    ({ inicio, fin } = getTodayRange());
+  } else if (value === "semana") {
+    ({ inicio, fin } = getWeekRange());
+  } else if (value === "mes") {
+    ({ inicio, fin } = getMonthRange());
+  }
+
+  return { inicio, fin };
+}

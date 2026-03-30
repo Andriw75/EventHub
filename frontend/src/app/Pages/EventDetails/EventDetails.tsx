@@ -111,7 +111,17 @@ export default function EventDetails() {
     const unsubscribe = addMessageListener((msg) => {
       if (msg.event === "event_data" && msg.data?.id === currentId) {
         setEventData(msg.data as EventFullOut);
-        console.log(eventData());
+      }
+
+      if (msg.event === "event_deleted") {
+        if (currentId) {
+          // tenemos que pocicionar mejor el toast container para que funcione
+          //addToast({ message: String(msg.event), type: "error" });
+
+          // @ts-ignore
+          const _ = alert(msg.message);
+          goBackToUser();
+        }
       }
     });
 
@@ -167,169 +177,171 @@ export default function EventDetails() {
   };
 
   return (
-    <section class={styles.wrapper}>
-      <button class={styles.backButton} onClick={goBackToUser}>
-        ← Volver
-      </button>
-      <header class={styles.header}>
-        <div>
-          <p class={styles.kicker}>Detalle del evento</p>
-          <h1 class={styles.title}>
-            {eventData()?.nombre ??
-              currentEvent()?.nombre ??
-              "Sin evento seleccionado"}
-          </h1>
-          <p class={styles.subtitle}>{connectionText()}</p>
-        </div>
-
-        <div class={`${styles.connectionPill} ${connectionClass()}`}>
-          {isConnected() ? "Conectado" : "Conectando"}
-        </div>
-      </header>
-
-      <Show
-        when={currentEvent()?.id}
-        fallback={
-          <div class={styles.emptyState}>
-            Selecciona un evento para mostrar sus datos.
+    <>
+      <section class={styles.wrapper}>
+        <button class={styles.backButton} onClick={goBackToUser}>
+          ← Volver
+        </button>
+        <header class={styles.header}>
+          <div>
+            <p class={styles.kicker}>Detalle del evento</p>
+            <h1 class={styles.title}>
+              {eventData()?.nombre ??
+                currentEvent()?.nombre ??
+                "Sin evento seleccionado"}
+            </h1>
+            <p class={styles.subtitle}>{connectionText()}</p>
           </div>
-        }
-      >
+
+          <div class={`${styles.connectionPill} ${connectionClass()}`}>
+            {isConnected() ? "Conectado" : "Conectando"}
+          </div>
+        </header>
+
         <Show
-          when={eventData()}
+          when={currentEvent()?.id}
           fallback={
-            <div class={styles.loadingCard}>
-              <div class={styles.loadingDot} />
-              <div>
-                <strong>Esperando información</strong>
-                <p>
-                  El evento ya está seleccionado, falta recibir los datos del
-                  servidor.
-                </p>
-              </div>
+            <div class={styles.emptyState}>
+              Selecciona un evento para mostrar sus datos.
             </div>
           }
         >
-          <div class={styles.content}>
-            <div class={styles.summaryGrid}>
-              <article class={styles.summaryCard}>
-                <span class={styles.label}>Tipo</span>
-                <strong>Rifa</strong>
-              </article>
-
-              <article class={styles.summaryCard}>
-                <span class={styles.label}>Estado</span>
-                <strong class={getStateClass(eventData()?.estado)}>
-                  {formatState(eventData()?.estado)}
-                </strong>
-              </article>
-
-              <article class={styles.summaryCard}>
-                <span class={styles.label}>Inicio</span>
-                <strong>{formatDate(eventData()?.fecha_inicio)}</strong>
-              </article>
-
-              <article class={styles.summaryCard}>
-                <span class={styles.label}>Fin</span>
-                <strong>{formatDate(eventData()?.fecha_fin)}</strong>
-              </article>
-            </div>
-
-            <div class={styles.detailsGrid}>
-              <article class={styles.panel}>
-                <h2 class={styles.panelTitle}>Información general</h2>
-
-                <div class={styles.infoList}>
-                  <div class={styles.infoRow}>
-                    <span>Nombre</span>
-                    <strong>{eventData()?.nombre}</strong>
-                  </div>
-                  <div class={styles.infoRow}>
-                    <span>ID</span>
-                    <strong>#{eventData()?.id}</strong>
-                  </div>
-                  <div class={styles.infoRow}>
-                    <span>Usuario</span>
-                    <strong>{eventData()?.usuario_id}</strong>
-                  </div>
-                  <div class={styles.infoRow}>
-                    <span>Creado</span>
-                    <strong>{formatDate(eventData()?.created_at)}</strong>
-                  </div>
+          <Show
+            when={eventData()}
+            fallback={
+              <div class={styles.loadingCard}>
+                <div class={styles.loadingDot} />
+                <div>
+                  <strong>Esperando información</strong>
+                  <p>
+                    El evento ya está seleccionado, falta recibir los datos del
+                    servidor.
+                  </p>
                 </div>
-              </article>
+              </div>
+            }
+          >
+            <div class={styles.content}>
+              <div class={styles.summaryGrid}>
+                <article class={styles.summaryCard}>
+                  <span class={styles.label}>Tipo</span>
+                  <strong>Rifa</strong>
+                </article>
 
-              <article class={styles.panel}>
-                <h2 class={styles.panelTitle}>Metadata</h2>
+                <article class={styles.summaryCard}>
+                  <span class={styles.label}>Estado</span>
+                  <strong class={getStateClass(eventData()?.estado)}>
+                    {formatState(eventData()?.estado)}
+                  </strong>
+                </article>
 
-                <Show
-                  when={metadataEntries().length > 0}
-                  fallback={
-                    <p class={styles.mutedText}>Sin metadata disponible.</p>
-                  }
-                >
-                  <div class={styles.metadataGrid}>
-                    <For each={metadataEntries()}>
-                      {([key, value]) => (
-                        <div class={styles.metadataItem}>
-                          <span>{key}</span>
-                          <strong>{String(value)}</strong>
-                        </div>
-                      )}
-                    </For>
-                  </div>
-                </Show>
-              </article>
-            </div>
+                <article class={styles.summaryCard}>
+                  <span class={styles.label}>Inicio</span>
+                  <strong>{formatDate(eventData()?.fecha_inicio)}</strong>
+                </article>
 
-            <Show when={rifaData()}>
-              {(rifa) => (
+                <article class={styles.summaryCard}>
+                  <span class={styles.label}>Fin</span>
+                  <strong>{formatDate(eventData()?.fecha_fin)}</strong>
+                </article>
+              </div>
+
+              <div class={styles.detailsGrid}>
                 <article class={styles.panel}>
-                  <div class={styles.rifaHeader}>
-                    <div>
-                      <h2 class={styles.panelTitle}>Números de la rifa</h2>
-                      <p class={styles.mutedText}>
-                        Se muestran todos los números del rango. Los activos
-                        quedan resaltados.
-                      </p>
+                  <h2 class={styles.panelTitle}>Información general</h2>
+
+                  <div class={styles.infoList}>
+                    <div class={styles.infoRow}>
+                      <span>Nombre</span>
+                      <strong>{eventData()?.nombre}</strong>
                     </div>
-
-                    <div class={styles.rifaStats}>
-                      <span class={styles.statBox}>
-                        Rango: {rifa().numero_inicio} - {rifa().numero_fin}
-                      </span>
-                      <span class={styles.statBox}>
-                        Activos: {rifa().numeros_reservados?.length}
-                      </span>
+                    <div class={styles.infoRow}>
+                      <span>ID</span>
+                      <strong>#{eventData()?.id}</strong>
                     </div>
-                  </div>
-
-                  <div class={styles.numbersGrid}>
-                    <For each={allNumbers()}>
-                      {(number) => {
-                        const active = () => activeNumbers().has(number);
-
-                        return (
-                          <div
-                            classList={{
-                              [styles.numberCell]: true,
-                              [styles.numberActive]: active(),
-                              [styles.numberInactive]: !active(),
-                            }}
-                            title={active() ? "Reservado" : "Disponible"}
-                          >
-                            {number}
-                          </div>
-                        );
-                      }}
-                    </For>
+                    <div class={styles.infoRow}>
+                      <span>Usuario</span>
+                      <strong>{eventData()?.usuario_id}</strong>
+                    </div>
+                    <div class={styles.infoRow}>
+                      <span>Creado</span>
+                      <strong>{formatDate(eventData()?.created_at)}</strong>
+                    </div>
                   </div>
                 </article>
-              )}
-            </Show>
-          </div>
+
+                <article class={styles.panel}>
+                  <h2 class={styles.panelTitle}>Metadata</h2>
+
+                  <Show
+                    when={metadataEntries().length > 0}
+                    fallback={
+                      <p class={styles.mutedText}>Sin metadata disponible.</p>
+                    }
+                  >
+                    <div class={styles.metadataGrid}>
+                      <For each={metadataEntries()}>
+                        {([key, value]) => (
+                          <div class={styles.metadataItem}>
+                            <span>{key}</span>
+                            <strong>{String(value)}</strong>
+                          </div>
+                        )}
+                      </For>
+                    </div>
+                  </Show>
+                </article>
+              </div>
+
+              <Show when={rifaData()}>
+                {(rifa) => (
+                  <article class={styles.panel}>
+                    <div class={styles.rifaHeader}>
+                      <div>
+                        <h2 class={styles.panelTitle}>Números de la rifa</h2>
+                        <p class={styles.mutedText}>
+                          Se muestran todos los números del rango. Los activos
+                          quedan resaltados.
+                        </p>
+                      </div>
+
+                      <div class={styles.rifaStats}>
+                        <span class={styles.statBox}>
+                          Rango: {rifa().numero_inicio} - {rifa().numero_fin}
+                        </span>
+                        <span class={styles.statBox}>
+                          Activos: {rifa().numeros_reservados?.length}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div class={styles.numbersGrid}>
+                      <For each={allNumbers()}>
+                        {(number) => {
+                          const active = () => activeNumbers().has(number);
+
+                          return (
+                            <div
+                              classList={{
+                                [styles.numberCell]: true,
+                                [styles.numberActive]: active(),
+                                [styles.numberInactive]: !active(),
+                              }}
+                              title={active() ? "Reservado" : "Disponible"}
+                            >
+                              {number}
+                            </div>
+                          );
+                        }}
+                      </For>
+                    </div>
+                  </article>
+                )}
+              </Show>
+            </div>
+          </Show>
         </Show>
-      </Show>
-    </section>
+      </section>
+    </>
   );
 }

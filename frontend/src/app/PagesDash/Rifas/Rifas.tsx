@@ -29,19 +29,24 @@ export default function Rifas() {
 
   function handleRangeChange(value: RangeType) {
     setRange(value);
-    if (value !== "personalizado") {
-      setFechaInicio(null);
-      setFechaFin(null);
+
+    let inicio: string | null = null;
+    let fin: string | null = null;
+
+    if (value === "hoy") {
+      ({ inicio, fin } = getTodayRange());
+    } else if (value === "semana") {
+      ({ inicio, fin } = getWeekRange());
+    } else if (value === "mes") {
+      ({ inicio, fin } = getMonthRange());
     }
+    setFechaInicio(inicio);
+    setFechaFin(fin);
   }
 
   async function handleSearch() {
     let inicio = fechaInicio();
     let fin = fechaFin();
-
-    if (range() === "hoy") ({ inicio, fin } = getTodayRange());
-    if (range() === "semana") ({ inicio, fin } = getWeekRange());
-    if (range() === "mes") ({ inicio, fin } = getMonthRange());
 
     setLoading(true);
 
@@ -64,10 +69,11 @@ export default function Rifas() {
       setLoading(false);
     }
   }
+
   onMount(async () => {
+    handleRangeChange(range());
     await handleSearch();
   });
-
   return (
     <>
       <div class={styles.container}>

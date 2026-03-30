@@ -13,10 +13,11 @@ import type { RifaOut } from "../../../domain/personEvents";
 import { confirm } from "../../common/UI/Confirm/confirmStore";
 import { addToast } from "../../common/UI/Toast/toastStore";
 import LoadingLoop from "../../common/IconSVG/LoadingLoop";
-import type { ApiError } from "../../../domain/utils";
+import { useAuth } from "../../context/auth";
 
 export default function Rifas() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const [page, setPage] = createSignal(1);
   const PAGE_SIZE = 15;
@@ -48,41 +49,45 @@ export default function Rifas() {
   async function handleSearch(targetPage = page()) {
     setLoading(true);
 
-    try {
-      const inicio = fechaInicio();
-      const fin = fechaFin();
-      const offset = (targetPage - 1) * PAGE_SIZE;
+    const inicio = fechaInicio();
+    const fin = fechaFin();
+    const offset = (targetPage - 1) * PAGE_SIZE;
 
-      const [countResponse, dataResponse] = await Promise.all([
-        fetchEventsTypeCount("rifa", inicio, fin),
-        fetchEventsType("rifa", offset, inicio, fin),
-      ]);
+    const [countResponse, dataResponse] = await Promise.all([
+      fetchEventsTypeCount("rifa", inicio, fin),
+      fetchEventsType("rifa", offset, inicio, fin),
+    ]);
 
-      if (countResponse.error || dataResponse.error) {
-        setRifas([]);
-        setTotalCount(0);
-        return;
-      }
-
-      setTotalCount(countResponse.data);
-
-      const rifasSolo = dataResponse.data.filter(
-        (e): e is RifaOut => e.tipo === "rifa",
-      );
-      setRifas(rifasSolo);
-
-      if (targetPage !== page()) {
-        setPage(targetPage);
-      }
-    } catch (err) {
-      if ((err as ApiError).status === 401) {
+    if (countResponse.error) {
+      if (countResponse.error.status === 401) {
+        await logout(false);
         navigate("/login");
-        return;
       }
-
       setRifas([]);
       setTotalCount(0);
-    } finally {
+      return;
+    }
+
+    if (dataResponse.error) {
+      if (dataResponse.error.status === 401) {
+        await logout(false);
+        navigate("/login");
+      }
+      setRifas([]);
+      setTotalCount(0);
+      return;
+    }
+
+    setTotalCount(countResponse.data);
+
+    const rifasSolo = dataResponse.data.filter(
+      (e): e is RifaOut => e.tipo === "rifa",
+    );
+    setRifas(rifasSolo);
+
+    if (targetPage !== page()) {
+      setPage(targetPage);
+
       setLoading(false);
     }
   }
@@ -222,6 +227,11 @@ export default function Rifas() {
                             if (result === null) return;
 
                             if (result?.error) {
+                              if (result?.error.status === 401) {
+                                await logout(false);
+                                navigate(`/login`);
+                              }
+
                               addToast({
                                 message: `Error al eliminar: ${result.error.detail}`,
                                 type: "error",

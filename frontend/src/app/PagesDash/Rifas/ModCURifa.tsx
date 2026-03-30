@@ -12,6 +12,7 @@ import { createRifa, updateRifa } from "../../../infrastructure/personEvents";
 import { addToast } from "../../common/UI/Toast/toastStore";
 import type { ApiError } from "../../../domain/utils";
 import { useNavigate } from "@solidjs/router";
+import { useAuth } from "../../context/auth";
 
 interface ModCURifaProps {
   onClose: () => void;
@@ -129,6 +130,7 @@ function NumberCircleSelector(props: NumberSelectorProps) {
 
 export default function ModCURifa(props: ModCURifaProps) {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [nombre, setNombre] = createSignal("");
   const [fechaInicio, setFechaInicio] = createSignal("");
   const [fechaFin, setFechaFin] = createSignal("");
@@ -387,6 +389,7 @@ export default function ModCURifa(props: ModCURifaProps) {
       props.onClose();
     } catch (err) {
       if ((err as ApiError).status === 401) {
+        await logout(false);
         navigate(`/login`);
       }
       setError("Error al guardar la rifa");

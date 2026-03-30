@@ -57,7 +57,6 @@ export default function Rifas() {
       fetchEventsTypeCount("rifa", inicio, fin),
       fetchEventsType("rifa", offset, inicio, fin),
     ]);
-
     if (countResponse.error) {
       if (countResponse.error.status === 401) {
         await logout(false);
@@ -77,7 +76,7 @@ export default function Rifas() {
       setTotalCount(0);
       return;
     }
-
+    console.log(countResponse.data);
     setTotalCount(countResponse.data);
 
     const rifasSolo = dataResponse.data.filter(
@@ -87,9 +86,8 @@ export default function Rifas() {
 
     if (targetPage !== page()) {
       setPage(targetPage);
-
-      setLoading(false);
     }
+    setLoading(false);
   }
 
   function handlePageChange(nextPage: number) {

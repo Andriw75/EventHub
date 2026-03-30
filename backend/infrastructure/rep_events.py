@@ -260,28 +260,14 @@ class RepEvents:
                     )
 
                 elif tipo == "subasta":
-                    # primero items
                     await conn.execute(
                         "DELETE FROM SubastaItem WHERE subasta_id = $1;",
                         event_id
                     )
 
-                    # (si tienes tabla Subasta, elimínala también)
-                    await conn.execute(
-                        "DELETE FROM Subasta WHERE event_id = $1;",
-                        event_id
-                    )
-
                 elif tipo == "venta_limitada":
-                    # primero items
                     await conn.execute(
                         "DELETE FROM VentaLimitadaItem WHERE venta_limitada_id = $1;",
-                        event_id
-                    )
-
-                    # (si tienes tabla VentaLimitada)
-                    await conn.execute(
-                        "DELETE FROM VentaLimitada WHERE event_id = $1;",
                         event_id
                     )
 
@@ -291,7 +277,6 @@ class RepEvents:
                         detail=f"Tipo de evento desconocido: {tipo}"
                     )
 
-                # 3️⃣ Finalmente eliminar el evento
                 await conn.execute(
                     "DELETE FROM Event WHERE id = $1;",
                     event_id

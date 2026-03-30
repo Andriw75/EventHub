@@ -76,7 +76,6 @@ export default function Rifas() {
       setTotalCount(0);
       return;
     }
-    console.log(countResponse.data);
     setTotalCount(countResponse.data);
 
     const rifasSolo = dataResponse.data.filter(

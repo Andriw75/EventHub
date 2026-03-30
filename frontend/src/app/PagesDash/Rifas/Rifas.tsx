@@ -15,10 +15,13 @@ import type { RifaOut } from "../../../domain/personEvents";
 import { confirm } from "../../common/UI/Confirm/confirmStore";
 import { addToast } from "../../common/UI/Toast/toastStore";
 import LoadingLoop from "../../common/IconSVG/LoadingLoop";
+import type { ApiError } from "../../../domain/utils";
+import { useNavigate } from "@solidjs/router";
 
 type RangeType = "hoy" | "semana" | "mes" | "personalizado";
 
 export default function Rifas() {
+  const navigate = useNavigate();
   const [showModal, setShowModal] = createSignal(false);
   const [selectedRifa, setSelectedRifa] = createSignal<RifaOut | null>(null);
   const [range, setRange] = createSignal<RangeType>("semana");
@@ -63,7 +66,9 @@ export default function Rifas() {
         setRifas(rifasSolo);
       }
     } catch (err) {
-      console.error(err);
+      if ((err as ApiError).status === 401) {
+        navigate(`/login`);
+      }
       setRifas([]);
     } finally {
       setLoading(false);

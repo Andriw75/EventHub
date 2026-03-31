@@ -9,6 +9,7 @@ import Rifas from "../../PagesDash/Rifas/Rifas";
 import { ConfirmContainer } from "../../common/UI/Confirm/confirmStore";
 import ToastContainer from "../../common/UI/Toast/ToastContainer";
 import Subasta from "../../PagesDash/Subasta/Subasta";
+import VentaLimitada from "../../PagesDash/VentaLimitada/VentaLimitada";
 
 const DashboardLayout = () => {
   const { user } = useAuth();
@@ -34,7 +35,7 @@ const DashboardLayout = () => {
       page = <Subasta />;
       break;
     case `/${params.person}/dashboard/events/venta-limitada`:
-      page = <>venta-limitada</>;
+      page = <VentaLimitada />;
       break;
   }
 

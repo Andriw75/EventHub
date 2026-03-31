@@ -1,11 +1,8 @@
 import type { Component } from "solid-js";
-import LoadingLoop from "../../common/IconSVG/LoadingLoop";
 import Events from "../../common/IconSVG/Events";
 import Ticket from "../../common/IconSVG/Ticket";
 import Countdown from "../../common/IconSVG/Countdown";
 import Gavel from "../../common/IconSVG/Gavel";
-// import Notification from "../../common/IconSvg/Notification";
-// import SettingsRounded from "../../common/IconSvg/SettingsRounded";
 
 export type MenuItem = {
   label: string;

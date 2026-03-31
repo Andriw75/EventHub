@@ -13,6 +13,7 @@ interface FloatingInputProps {
 }
 
 export default function FloatingInput(props: FloatingInputProps) {
+  // @ts-ignore
   let inputRef: HTMLInputElement | undefined;
   const [isFocused, setIsFocused] = createSignal(false);
 

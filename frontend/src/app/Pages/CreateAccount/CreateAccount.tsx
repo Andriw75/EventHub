@@ -1,6 +1,5 @@
-import { createSignal, createEffect, onMount } from "solid-js";
+import { createSignal, createEffect, onMount, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import FloatingInput from "../../common/components/FloatingInput";
 import styles from "./CreateAccount.module.css";
 import { authService } from "../../../infrastructure/auth";
 import { useAuth } from "../../context/auth";
@@ -19,7 +18,12 @@ export default function CreateAccount() {
   const [passwordError, setPasswordError] = createSignal("");
 
   const [message, setMessage] = createSignal("");
+  const [messageType, setMessageType] = createSignal<"success" | "info">("info");
   const [loading, setLoading] = createSignal(false);
+
+  const [touchedCorreo, setTouchedCorreo] = createSignal(false);
+  const [touchedName, setTouchedName] = createSignal(false);
+  const [touchedPassword, setTouchedPassword] = createSignal(false);
 
   const validateCorreo = (value: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -30,30 +34,21 @@ export default function CreateAccount() {
 
   const validateName = (value: string) => {
     if (!value) return "El nombre es obligatorio";
-    if (value.length >= 50)
-      return "El usuario debe tener menos de 50 caracteres";
-
-    const usernameRegex = /^[a-zA-Z0-9_-]+$/;
-    if (!usernameRegex.test(value)) {
-      return "El nombre solo puede contener letras, números, guiones o guiones bajos";
-    }
-
+    if (value.length >= 50) return "Máximo 50 caracteres";
+    if (!/^[a-zA-Z0-9_-]+$/.test(value))
+      return "Solo letras, números, guiones y guiones bajos";
     return "";
   };
 
   const validatePassword = (value: string) => {
     if (!value) return "La contraseña es obligatoria";
-    if (value.length < 6)
-      return "La contraseña debe tener al menos 6 caracteres";
-    if (value.length >= 50)
-      return "La contraseña debe tener menos de 50 caracteres";
-    if (!/[A-Z]/.test(value))
-      return "Debe contener al menos una letra mayúscula";
-    if (!/[a-z]/.test(value))
-      return "Debe contener al menos una letra minúscula";
-    if (!/\d/.test(value)) return "Debe contener al menos un número";
+    if (value.length < 6) return "Mínimo 6 caracteres";
+    if (value.length >= 50) return "Máximo 50 caracteres";
+    if (!/[A-Z]/.test(value)) return "Debe incluir una mayúscula";
+    if (!/[a-z]/.test(value)) return "Debe incluir una minúscula";
+    if (!/\d/.test(value)) return "Debe incluir un número";
     if (!/[!@#$%^&*(),.?":{}|<>]/.test(value))
-      return "Debe contener al menos un símbolo especial";
+      return "Debe incluir un símbolo especial";
     return "";
   };
 
@@ -63,19 +58,18 @@ export default function CreateAccount() {
     setPasswordError(validatePassword(password()));
   });
 
-  const isFormValid = () => {
-    return (
-      !correoError() &&
-      !nameError() &&
-      !passwordError() &&
-      correo() &&
-      name() &&
-      password()
-    );
-  };
+  const isFormValid = () =>
+    !correoError() && !nameError() && !passwordError() &&
+    correo() && name() && password();
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
+    setTouchedCorreo(true);
+    setTouchedName(true);
+    setTouchedPassword(true);
+
+    if (!isFormValid()) return;
+
     setMessage("");
     setLoading(true);
 
@@ -87,16 +81,16 @@ export default function CreateAccount() {
       );
 
       if (success) {
+        setMessageType("success");
         setMessage(
-          "Revisa tu correo para confirmar la creación de la cuenta y luego inicia sesión con tus credenciales.",
+          "Revisa tu correo para confirmar la cuenta. Luego inicia sesión.",
         );
       } else {
-        setMessage(
-          detail ||
-            "No se pudo crear la cuenta. Revisa los datos e intenta de nuevo.",
-        );
+        setMessageType("info");
+        setMessage(detail || "No se pudo crear la cuenta. Intenta de nuevo.");
       }
     } catch (err: unknown) {
+      setMessageType("info");
       if (err instanceof Error) setMessage(err.message);
       else setMessage("Ocurrió un error desconocido");
     } finally {
@@ -105,58 +99,143 @@ export default function CreateAccount() {
   };
 
   onMount(() => {
-    console.log(user());
+    if (user()) navigate(`/${user()?.name}/dashboard`);
   });
 
   return (
-    <div class={styles.container}>
-      <h1>Crear Cuenta</h1>
+    <div class={styles.page}>
+      {/* Panel izquierdo */}
+      <div class={styles.hero}>
+        <div class={styles.heroPattern} />
 
-      <form onSubmit={handleSubmit} class={styles.form}>
-        <FloatingInput
-          placeholder="Correo"
-          type="email"
-          value={correo()}
-          onInput={setCorreo}
-        />
-        {correo() && correoError() && (
-          <p class={styles.error}>{correoError()}</p>
-        )}
+        <div class={styles.heroTop}>
+          <div class={styles.logoBadge}>
+            <div class={styles.logoDot} />
+            Nueva cuenta
+          </div>
+        </div>
 
-        <FloatingInput
-          placeholder="Nombre"
-          type="text"
-          value={name()}
-          onInput={setName}
-        />
-        {name() && nameError() && <p class={styles.error}>{nameError()}</p>}
+        <div class={styles.heroCenter}>
+          <h1 class={styles.heroHeading}>
+            Empieza a
+            <br />
+            gestionar
+            <br />
+            hoy.
+          </h1>
+          <p class={styles.heroSub}>
+            Crea tu cuenta y accede a todas las herramientas de gestión de eventos.
+          </p>
+        </div>
 
-        <FloatingInput
-          placeholder="Contraseña"
-          type="password"
-          value={password()}
-          onInput={setPassword}
-        />
-        {password() && passwordError() && (
-          <p class={styles.error}>{passwordError()}</p>
-        )}
+        <div class={styles.heroFeatures}>
+          <div class={styles.heroFeature}>
+            <div class={styles.featureIcon}>🎟</div>
+            Crea y gestiona rifas fácilmente
+          </div>
+          <div class={styles.heroFeature}>
+            <div class={styles.featureIcon}>🔨</div>
+            Organiza subastas en tiempo real
+          </div>
+          <div class={styles.heroFeature}>
+            <div class={styles.featureIcon}>⏳</div>
+            Controla ventas con límite de stock
+          </div>
+        </div>
+      </div>
 
-        <button class={styles.button} disabled={loading() || !isFormValid()}>
-          {loading() ? <LoadingLoop /> : "Crear cuenta"}
-        </button>
-      </form>
+      {/* Panel del formulario */}
+      <div class={styles.formSide}>
+        <div class={styles.formBox}>
+          <div class={styles.formHeader}>
+            <p class={styles.greeting}>Registro</p>
+            <h2 class={styles.formTitle}>Crear cuenta</h2>
+          </div>
 
-      {message() && <p class={styles.message}>{message()}</p>}
+          <form onSubmit={handleSubmit} novalidate>
+            <div class={styles.fields}>
+              <div class={styles.field}>
+                <label class={styles.label}>Correo electrónico</label>
+                <input
+                  class={`${styles.input} ${touchedCorreo() && correoError() ? styles.inputError : ""}`}
+                  type="email"
+                  placeholder="tu@correo.com"
+                  value={correo()}
+                  onInput={(e) => setCorreo(e.currentTarget.value)}
+                  onBlur={() => setTouchedCorreo(true)}
+                  disabled={loading()}
+                  autocomplete="email"
+                />
+                <Show when={touchedCorreo() && correoError()}>
+                  <p class={styles.errorHint}>⚠ {correoError()}</p>
+                </Show>
+              </div>
 
-      <p class={styles.link}>
-        ¿Ya tienes cuenta?{" "}
-        <span
-          style={{ cursor: "pointer", color: "var(--color-success)" }}
-          onClick={() => navigate("/login")}
-        >
-          Inicia sesión
-        </span>
-      </p>
+              <div class={styles.field}>
+                <label class={styles.label}>Nombre de usuario</label>
+                <input
+                  class={`${styles.input} ${touchedName() && nameError() ? styles.inputError : ""}`}
+                  type="text"
+                  placeholder="mi_usuario"
+                  value={name()}
+                  onInput={(e) => setName(e.currentTarget.value)}
+                  onBlur={() => setTouchedName(true)}
+                  disabled={loading()}
+                  autocomplete="username"
+                />
+                <Show when={touchedName() && nameError()}>
+                  <p class={styles.errorHint}>⚠ {nameError()}</p>
+                </Show>
+              </div>
+
+              <div class={styles.field}>
+                <label class={styles.label}>Contraseña</label>
+                <input
+                  class={`${styles.input} ${touchedPassword() && passwordError() ? styles.inputError : ""}`}
+                  type="password"
+                  placeholder="••••••••"
+                  value={password()}
+                  onInput={(e) => setPassword(e.currentTarget.value)}
+                  onBlur={() => setTouchedPassword(true)}
+                  disabled={loading()}
+                  autocomplete="new-password"
+                />
+                <Show when={touchedPassword() && passwordError()}>
+                  <p class={styles.errorHint}>⚠ {passwordError()}</p>
+                </Show>
+              </div>
+            </div>
+
+            <button
+              class={styles.submitBtn}
+              type="submit"
+              disabled={loading()}
+            >
+              {loading() ? (
+                <LoadingLoop width="1.1em" height="1.1em" />
+              ) : (
+                "Crear cuenta"
+              )}
+            </button>
+          </form>
+
+          <Show when={message()}>
+            <p class={`${styles.message} ${styles[messageType()]}`}>
+              {message()}
+            </p>
+          </Show>
+
+          <p class={styles.footer}>
+            ¿Ya tienes cuenta?{" "}
+            <span
+              class={styles.footerLink}
+              onClick={() => navigate("/login")}
+            >
+              Iniciar sesión
+            </span>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

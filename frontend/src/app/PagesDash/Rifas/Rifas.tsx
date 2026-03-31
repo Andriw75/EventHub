@@ -180,7 +180,7 @@ export default function Rifas() {
 
         {loading() ? (
           <div class={styles.loadingWrap}>
-            <LoadingLoop width="100%" height="42rem" />
+            <LoadingLoop width="100%" height="20rem" />
           </div>
         ) : (
           <>

@@ -185,7 +185,7 @@ export default function VentaLimitada() {
 
                 {loading() ? (
                     <div class={styles.loadingWrap}>
-                        <LoadingLoop width="100%" height="42rem" />
+                        <LoadingLoop width="100%" height="30rem" />
                     </div>
                 ) : (
                     <>

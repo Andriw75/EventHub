@@ -441,7 +441,6 @@
 }
 
 .loadingWrap {
-    min-height: 42rem;
     display: flex;
     align-items: center;
     justify-content: center;

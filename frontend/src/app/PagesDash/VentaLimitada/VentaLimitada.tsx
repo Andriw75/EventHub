@@ -1,6 +1,6 @@
 import { createSignal, For, onMount, createMemo, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import ModCUVentaLimitada from "./Modcuventalimitada";
+import ModCUVentaLimitada from "./ModCUVentaLimitada";
 import Pagination from "../../common/components/Pagination";
 import {
     deleteEvent,

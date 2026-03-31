@@ -460,11 +460,20 @@ class RepEvents:
                             """,
                             event_id, item.nombre, item.precio_maximo
                         )
+                items_rows = await conn.fetch(
+                    """
+                    SELECT nombre, precio_maximo
+                    FROM SubastaItem
+                    WHERE subasta_id = $1
+                    """,
+                    event_id
+                )
 
                 # 4. Devolver evento
-                return SubastaUpdate.model_validate({
+                return SubastaOut.model_validate({
                     **dict(event_row),
-                    "metadata": json.loads(event_row["metadata"]) if isinstance(event_row["metadata"], str) else event_row["metadata"]
+                    "metadata": json.loads(event_row["metadata"]) if isinstance(event_row["metadata"], str) else event_row["metadata"],
+                    "items": [dict(item) for item in items_rows]
                 })
 
     async def update_venta_limitada(self, event_id: int, user_id: int, data: VentaLimitadaUpdate) -> EventOut:
@@ -538,11 +547,21 @@ class RepEvents:
                             """,
                             event_id, item.nombre, item.precio, item.n_cantidad_maxima
                         )
+                
+                items_rows = await conn.fetch(
+                    """
+                    SELECT nombre, precio, n_cantidad_maxima
+                    FROM VentaLimitadaItem
+                    WHERE venta_limitada_id = $1
+                    """,
+                    event_id
+                )
 
                 # 4. Devolver evento
-                return VentaLimitadaUpdate.model_validate({
+                return VentaLimitadaOut.model_validate({
                     **dict(event_row),
-                    "metadata": json.loads(event_row["metadata"]) if isinstance(event_row["metadata"], str) else event_row["metadata"]
+                    "metadata": json.loads(event_row["metadata"]) if isinstance(event_row["metadata"], str) else event_row["metadata"],
+                    "items": [dict(item) for item in items_rows]
                 })
 
     async def list_events_by_type_len(

@@ -462,7 +462,7 @@ class RepEvents:
                         )
 
                 # 4. Devolver evento
-                return EventOut.model_validate({
+                return SubastaUpdate.model_validate({
                     **dict(event_row),
                     "metadata": json.loads(event_row["metadata"]) if isinstance(event_row["metadata"], str) else event_row["metadata"]
                 })
@@ -540,7 +540,7 @@ class RepEvents:
                         )
 
                 # 4. Devolver evento
-                return EventOut.model_validate({
+                return VentaLimitadaUpdate.model_validate({
                     **dict(event_row),
                     "metadata": json.loads(event_row["metadata"]) if isinstance(event_row["metadata"], str) else event_row["metadata"]
                 })

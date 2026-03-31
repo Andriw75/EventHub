@@ -13,11 +13,12 @@ import type { SubastaOut } from "../../../domain/personEvents";
 import { confirm } from "../../common/UI/Confirm/confirmStore";
 import { addToast } from "../../common/UI/Toast/toastStore";
 import LoadingLoop from "../../common/IconSVG/LoadingLoop";
-import type { ApiError } from "../../../domain/utils";
 
 import { type RangeType, getRangeByType, formatDateTime } from "../../utils";
+import { useAuth } from "../../context/auth";
 
 export default function Subasta() {
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
   const [page, setPage] = createSignal(1);
@@ -52,43 +53,50 @@ export default function Subasta() {
   async function handleSearch(targetPage = page()) {
     setLoading(true);
 
-    try {
-      const inicio = fechaInicio();
-      const fin = fechaFin();
-      const offset = (targetPage - 1) * PAGE_SIZE;
+    const inicio = fechaInicio();
+    const fin = fechaFin();
+    const offset = (targetPage - 1) * PAGE_SIZE;
 
-      const [countResponse, dataResponse] = await Promise.all([
-        fetchEventsTypeCount("subasta", inicio, fin),
-        fetchEventsType("subasta", offset, inicio, fin),
-      ]);
+    const [countResponse, dataResponse] = await Promise.all([
+      fetchEventsTypeCount("subasta", inicio, fin),
+      fetchEventsType("subasta", offset, inicio, fin),
+    ]);
 
-      if (countResponse.error || dataResponse.error) {
-        setSubastas([]);
-        setTotalCount(0);
-        return;
-      }
-
-      setTotalCount(countResponse.data);
-
-      const subastasSolo = dataResponse.data.filter(
-        (e): e is SubastaOut => e.tipo === "subasta",
-      );
-      setSubastas(subastasSolo);
-
-      if (targetPage !== page()) {
-        setPage(targetPage);
-      }
-    } catch (err) {
-      if ((err as ApiError).status === 401) {
+    if (countResponse.error) {
+      if (countResponse.error.status === 401) {
+        await logout(false);
         navigate("/login");
-        return;
       }
-
       setSubastas([]);
       setTotalCount(0);
-    } finally {
       setLoading(false);
+      return;
     }
+
+    if (dataResponse.error) {
+      if (dataResponse.error.status === 401) {
+        await logout(false);
+        navigate("/login");
+      }
+      setSubastas([]);
+      setTotalCount(0);
+      setLoading(false);
+      return;
+    }
+
+    setTotalCount(countResponse.data);
+
+    const subastasSolo = dataResponse.data.filter(
+      (e): e is SubastaOut => e.tipo === "subasta",
+    );
+
+    setSubastas(subastasSolo);
+
+    if (targetPage !== page()) {
+      setPage(targetPage);
+    }
+
+    setLoading(false);
   }
 
   function handlePageChange(nextPage: number) {
